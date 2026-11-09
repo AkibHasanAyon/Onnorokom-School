@@ -10,7 +10,7 @@ Where the brief is silent, these are the choices made and why. (A copy of this f
 5. **Confirming or cancelling someone else's hold → 403.**
 
 ## Classes
-6. Name is required, trimmed, 1–100 characters, **unique case-insensitively** (two classes with the same name would be indistinguishable to parents). `totalSeats` is an integer 1–10,000.
+6. Name is required, trimmed, 1–100 characters, **unique case-insensitively** (two classes with the same name would be indistinguishable to parents), and may not contain control characters (PostgreSQL cannot store NUL, and line breaks or escape codes make no sense in a name shown to parents). `totalSeats` is an integer 1–10,000.
 7. Classes cannot be edited or deleted — the contract has no such endpoints.
 8. `GET /classes` is ordered by creation time.
 

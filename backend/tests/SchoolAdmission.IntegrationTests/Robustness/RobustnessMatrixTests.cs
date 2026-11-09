@@ -66,6 +66,9 @@ public sealed class RobustnessMatrixTests(RobustnessFixture api) : IClassFixture
             Body("classes: xml", "<class/>", 415, "UNSUPPORTED_MEDIA_TYPE", "application/xml"),
             Body("classes: form", "name=x&totalSeats=5", 415, "UNSUPPORTED_MEDIA_TYPE", "application/x-www-form-urlencoded"),
             Body("classes: unknown charset", """{"name":"x","totalSeats":5}""", 415, "UNSUPPORTED_MEDIA_TYPE", "application/json; charset=klingon"),
+            Body("classes: NUL in name", """{"name":"a\u0000b","totalSeats":5}""", 400, "VALIDATION_FAILED"),
+            Body("classes: control chars in name", """{"name":"a\u0007\u001bb","totalSeats":5}""", 400, "VALIDATION_FAILED"),
+            Body("classes: newline inside name", """{"name":"Class\n6","totalSeats":5}""", 400, "VALIDATION_FAILED"),
             Body("classes: lone high surrogate", """{"name":"a\ud800b","totalSeats":5}""", 400, "MALFORMED_JSON"),
             Body("classes: lone low surrogate", """{"name":"\udc00","totalSeats":5}""", 400, "MALFORMED_JSON"),
             // ---- GET /classes/{id} ----

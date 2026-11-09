@@ -41,8 +41,13 @@ internal sealed class UnitOfWork(AdmissionDbContext db, ILogger<UnitOfWork> logg
                     "This student already has an active application for this class.");
 
             case PostgresErrorCodes.CheckViolation:
-                // A check constraint fired: a validator rule is missing. Still the client's input → 400, not 500.
-                logger.LogError("Check constraint {Constraint} violated; a validation rule is missing", pg.ConstraintName);
+            case PostgresErrorCodes.CharacterNotInRepertoire:   // 22021, e.g. a NUL character in text
+            case PostgresErrorCodes.UntranslatableCharacter:    // 22P05
+            case PostgresErrorCodes.StringDataRightTruncation:  // 22001, value longer than the column
+                // The database rejected a value the validators let through: a validation rule is missing.
+                // Still the client's input → 400, not 500.
+                logger.LogError("Database rejected input ({SqlState} {Constraint}); a validation rule is missing",
+                    pg.SqlState, pg.ConstraintName);
                 return new RequestValidationException(
                     [new ValidationFailure(string.Empty, "One or more fields are invalid.") { ErrorCode = ErrorCodes.ValidationFailed }]);
 
