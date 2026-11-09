@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using SchoolAdmission.Application.Abstractions.Persistence;
 using SchoolAdmission.Infrastructure.Persistence;
 
 namespace SchoolAdmission.Infrastructure;
@@ -14,6 +15,8 @@ public static class DependencyInjection
         services.AddDbContext<AdmissionDbContext>(o => o.UseNpgsql(
             configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings__Default is not set.")));
+
+        services.AddScoped<IDatabaseHealthCheck, DatabaseHealthCheck>();
 
         return services;
     }

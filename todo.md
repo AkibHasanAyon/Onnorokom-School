@@ -1,10 +1,10 @@
 # todo.md — Project Log
 
 ## Current Status
-Phase 02 in progress on `phase/02-domain-persistence`. Domain layer done with unit tests. `AdmissionDbContext` + configurations map exactly to Database.md §2 (snake_case, check constraints, partial unique index `ux_holds_class_student_active`, 3 query indexes); a DDL-based model test verifies this without a DB. Tests: 44 unit + 27 integration passing. Next: `InitialCreate` migration, startup migrator with advisory lock, DB-backed health check.
+Phase 02 (Domain & persistence) is committed on `phase/02-domain-persistence`. Domain entities with state transitions; EF Core model matching Database.md §2; `InitialCreate` migration applied at startup by `DatabaseMigrator` (waits for Postgres, advisory lock 7272026 so several instances can start together); `GET /health` now runs `SELECT 1` and returns 503 `{"status":"unavailable"}` when the DB is down. Tests: 44 unit + 33 integration passing against real PostgreSQL. Data survives `docker compose down` + `up`. Next: Phase 03, application plumbing (MediatR behaviors, unit of work/repositories, problem+json errors, CORS, test helpers).
 
 ## In Progress
-- Phase 02 — Domain & persistence: 02.4 `feat(infra): add initial migration and startup migrator`
+- Phase 02 — Domain & persistence: verification, push and merge
 
 ## Pending / Upcoming
 
@@ -22,7 +22,7 @@ Phase 02 in progress on `phase/02-domain-persistence`. Domain layer done with un
 - [x] 02.1 feat(domain): add class and hold entities with state transitions
 - [x] 02.2 test(domain): cover hold state transitions with unit tests
 - [x] 02.3 feat(infra): add EF Core context and entity configurations
-- [ ] 02.4 feat(infra): add initial migration and startup migrator
+- [x] 02.4 feat(infra): add initial migration and startup migrator
 
 ### 03 — Application plumbing (`phase/03-app-plumbing`)
 - [ ] 03.1 feat(app): add CQRS abstractions and MediatR pipeline behaviors
@@ -94,7 +94,7 @@ Phase 02 in progress on `phase/02-domain-persistence`. Domain layer done with un
 |-------|--------|---------|-------|--------|----------------|
 | 00 — Repository bootstrap | phase/00-bootstrap | 3/3 (c925994, 61a6a72, a95d5a1) | n/a (docs only) | ✅ | ✅ |
 | 01 — Backend skeleton & Docker | phase/01-backend-skeleton | 3/3 (797a484, 836e02e, d597e04) | ✅ 1 passed (Docker) | ✅ | ✅ |
-| 02 — Domain & persistence | phase/02-domain-persistence | 3/4 (53a7d5a, a23bc5b, 02.3) | | | |
+| 02 — Domain & persistence | phase/02-domain-persistence | 4/4 (53a7d5a, a23bc5b, 16442dd, 02.4) | ✅ 44 unit + 33 integration (Docker, real PostgreSQL) | ⏳ | ⏳ |
 | 03 — Application plumbing | phase/03-app-plumbing | 0/4 | | | |
 | 04 — Classes | phase/04-classes | 0/3 | | | |
 | 05 — Holds & concurrency | phase/05-holds-concurrency | 0/3 | | | |
@@ -110,7 +110,8 @@ Phase 02 in progress on `phase/02-domain-persistence`. Domain layer done with un
 
 ## Done Log
 (Times are the git commit times, `git log --date=format:"%Y-%m-%d %H:%M"`.)
-- 2026-11-09 23:47 — 02.3 — Infrastructure: AdmissionDbContext, SchoolClassConfiguration, HoldConfiguration, HoldStatusConverter (Held ↔ "HELD"), AddInfrastructure (Npgsql, no retry strategy), wired in Program — `dotnet test`: UnitTests 44 passed, IntegrationTests 27 passed (26 new ModelTests cases checking generated DDL vs Database.md §2), 0 failed — (this commit)
+- 2026-11-09 23:55 — 02.4 — `InitialCreate` migration (generated with dotnet-ef 10.0.14 in the SDK container, matches Database.md §2), `DatabaseMigrator` (connect retry 15×2 s, `pg_advisory_lock(7272026)`, creates history table first, `MigrateAsync`), Program migrates before `Run`, `IDatabaseHealthCheck` + `/health` → 503 when the DB is unreachable (3 s probe timeout); test harness: `PostgresDatabase` (throwaway `test_<guid>` DB) + `AdmissionApiFactory`; tests: migration applied, two instances starting together migrate once, restart keeps data, status stored as "HELD", partial unique index + case-insensitive class name index enforced, health 200/503 — `dotnet test` against PostgreSQL 17 (compose network): UnitTests 44 passed, IntegrationTests 33 passed, 0 failed; Docker stack: fresh volume migrates with no error logs, health 200, `down`+`up` keeps rows, `stop db` → 503, `start db` → 200 — (this commit)
+- 2026-11-09 23:47 — 02.3 — Infrastructure: AdmissionDbContext, SchoolClassConfiguration, HoldConfiguration, HoldStatusConverter (Held ↔ "HELD"), AddInfrastructure (Npgsql, no retry strategy), wired in Program — `dotnet test`: UnitTests 44 passed, IntegrationTests 27 passed (26 new ModelTests cases checking generated DDL vs Database.md §2), 0 failed — 16442dd
 - 2026-11-09 23:45 — 02.2 — unit tests: HoldTests (Create, EffectiveStatus boundaries incl. exactly-at-expiry, Confirm/Cancel matrix with idempotency and error codes, Expire), SchoolClassTests (trim/normalize, name 1–100, seats 1–10000), StudentIdentifierTests (ASCII-only, Bengali/full-width rejected) — `dotnet test` in sdk:10.0 container: UnitTests 44 passed, IntegrationTests 1 passed, 0 failed — a23bc5b
 - 2026-11-09 23:44 — 02.1 — Domain: SchoolClass, Hold (state transitions per Implementation.md §R2 plus `Expire`), HoldStatus, ErrorCodes (all API.md §3 codes), DomainException, StudentIdentifier — build 0 warnings; `dotnet test`: 1 passed (existing health test; domain tests follow in 02.2) — 53a7d5a
 - 2026-11-09 23:37 — 01 merge — full verification on d597e04 (backend-tests in Docker: 1 passed; `docker compose up --build -d` + `curl /health` → 200; no bin/obj/PDF/.env tracked), pushed phase/01-backend-skeleton, merged --no-ff into main, Git History row updated in the merge commit — 9945738
@@ -135,8 +136,13 @@ Phase 02 in progress on `phase/02-domain-persistence`. Domain layer done with un
 - **Health test added in Phase 01** (the plan starts tests in Phase 02/03). It needs no database and pins the timestamp format early. Its `serverTime` is formatted in the controller for now; Phase 03 moves timestamp formatting to the shared `UtcDateTimeOffsetConverter`.
 - **Explicit lowercase PK/FK names** (`pk_classes`, `pk_holds`, `fk_holds_classes_class_id`). Database.md §2 leaves them unnamed; lowercase keeps every DB object snake_case, matching the other names. Schema detail only, so not added to ASSUMPTIONS.md.
 - **Model verified by generating the DDL** (`GenerateCreateScript`) in `IntegrationTests/Persistence/ModelTests`, so schema drift from Database.md §2 is caught without a database.
+- **Test harness pulled forward from 03.4.** Since 02.4 the API migrates the database at startup, so every host-based test (including the Phase 01 health test) needs a real PostgreSQL. A minimal `PostgresDatabase` + `AdmissionApiFactory` (Testing_QA.md §3.1–3.2) ships in 02.4; 03.4 still adds the remaining helpers (`TestData`, API client extensions, invariant assertion, the Concurrency collection). Same structure, nothing merged or skipped.
+- **DB-backed health check lives in 02.4** (Implementation.md task 2.3 has no commit of its own in Git_Workflow.md §5); it needs the migrator anyway. Exposed via an `IDatabaseHealthCheck` abstraction in Application so the controller doesn't touch EF Core.
+- **Migrator creates `__EFMigrationsHistory` before `MigrateAsync`** (`IHistoryRepository.CreateIfNotExistsAsync`). Otherwise EF logs a `fail: Failed executing DbCommand` on every fresh database, which is harmless but alarming for reviewers reading `docker compose logs`.
 - **ASSUMPTIONS.md scope.** Only product/spec interpretations go into both ASSUMPTIONS.md files; git/tooling decisions are logged here only, to keep the graded ASSUMPTIONS.md short and on-topic.
 
 ## AI Mistakes & Fixes
+- **[Backend tests]** The AI set `FakeTimeProvider` to a fixed past date (2026-11-01) in the health test, but the factory clock starts at the current time and `FakeTimeProvider` can't go backwards → `ArgumentOutOfRangeException`. Caught by: the first test run in 02.4. Fix: use a fixed future instant (2099-11-01T04:03:12.789Z).
+- **[Migrator]** The AI first logged pending migrations via `GetPendingMigrationsAsync` and assumed `MigrateAsync` alone would start cleanly; both produce an EF `fail:` log line on a brand-new database (history table queried before it exists). Caught by: reading `docker compose logs backend` during manual Docker verification. Fix: create the history table first with `IHistoryRepository.CreateIfNotExistsAsync`, then `MigrateAsync`; verified 0 `fail:` lines on a fresh volume and on restart.
 - **[Project log]** The AI wrote estimated times into the Done Log instead of real ones (e.g. 01.1 logged at 23:40, but committed at 23:29; Phase 00 entries were off by 1–4 minutes). Caught by: comparing with `git log` before committing 01.3. Fix: all Done Log times now come from `git log` commit times. Pushed Phase 00 history was not rewritten; the correction ships in 01.3.
 - **[Git / GitHub]** The AI pushed `phase/00-bootstrap` before `main` existed on the remote, so GitHub made the phase branch the default branch. Caught by: `git ls-remote --symref origin HEAD` after the Phase 00 push. Fix: needs a manual switch in GitHub settings (see Blockers). For future repos, push `main` first.
