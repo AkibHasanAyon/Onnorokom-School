@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.AspNetCore.Mvc;
 using SchoolAdmission.Api.Contracts;
 using SchoolAdmission.Application.Abstractions.Persistence;
@@ -29,10 +28,10 @@ public sealed class HealthController(IDatabaseHealthCheck database, TimeProvider
             }
         }
 
-        // UTC, whole seconds, trailing Z — same timestamp format as the rest of the API.
-        var serverTime = clock.GetUtcNow().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
+        // serverTime is written by UtcDateTimeOffsetConverter (UTC, whole seconds, trailing Z).
+        var now = clock.GetUtcNow();
         return healthy
-            ? Ok(new HealthResponse("ok", serverTime))
-            : StatusCode(StatusCodes.Status503ServiceUnavailable, new HealthResponse("unavailable", serverTime));
+            ? Ok(new HealthResponse("ok", now))
+            : StatusCode(StatusCodes.Status503ServiceUnavailable, new HealthResponse("unavailable", now));
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolAdmission.Application.Abstractions.Persistence;
 using SchoolAdmission.Infrastructure.Persistence;
+using SchoolAdmission.Infrastructure.Repositories;
 
 namespace SchoolAdmission.Infrastructure;
 
@@ -16,6 +17,9 @@ public static class DependencyInjection
             configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("ConnectionStrings__Default is not set.")));
 
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IClassRepository, ClassRepository>();
+        services.AddScoped<IHoldRepository, HoldRepository>();
         services.AddScoped<IDatabaseHealthCheck, DatabaseHealthCheck>();
 
         return services;
