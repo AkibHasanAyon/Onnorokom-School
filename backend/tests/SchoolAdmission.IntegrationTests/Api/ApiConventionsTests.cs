@@ -1,50 +1,28 @@
 using System.Net;
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolAdmission.IntegrationTests.Infrastructure;
 
 namespace SchoolAdmission.IntegrationTests.Api;
 
-/// <summary>problem+json error mapping, JSON conventions and CORS (API.md §1, §3).</summary>
-public sealed class ApiConventionsTests : IAsyncLifetime
+/// <summary>The API host plus the test-only <see cref="ProbeController"/>.</summary>
+public sealed class ProbeApiFixture : ApiFixture
 {
-    private readonly PostgresDatabase _db = new();
-    private AdmissionApiFactory _factory = default!;
-    private HttpClient _client = default!;
+    protected override WebApplicationFactory<Program> Customize(AdmissionApiFactory factory) =>
+        factory.WithWebHostBuilder(b => b.ConfigureTestServices(s =>
+            s.AddControllers().AddApplicationPart(typeof(ProbeController).Assembly)));
+}
 
-    public async Task InitializeAsync()
-    {
-        await _db.InitializeAsync();
-        _factory = new AdmissionApiFactory(_db.ConnectionString);
-        _client = _factory
-            .WithWebHostBuilder(b => b.ConfigureTestServices(s =>
-                s.AddControllers().AddApplicationPart(typeof(ProbeController).Assembly)))
-            .CreateClient();
-    }
+/// <summary>problem+json error mapping, JSON conventions and CORS (API.md §1, §3).</summary>
+public sealed class ApiConventionsTests(ProbeApiFixture api) : IClassFixture<ProbeApiFixture>
+{
+    private readonly HttpClient _client = api.Client;
 
-    public async Task DisposeAsync()
-    {
-        _client.Dispose();
-        await _factory.DisposeAsync();
-        await _db.DisposeAsync();
-    }
-
-    private static async Task<JsonElement> ProblemAsync(HttpResponseMessage res, HttpStatusCode status, string code)
-    {
-        Assert.Equal(status, res.StatusCode);
-        Assert.Equal("application/problem+json", res.Content.Headers.ContentType?.MediaType);
-        var body = await res.Content.ReadAsStringAsync();
-        var json = JsonDocument.Parse(body).RootElement.Clone();
-        Assert.Equal(code, json.GetProperty("code").GetString());
-        Assert.Equal((int)status, json.GetProperty("status").GetInt32());
-        Assert.Equal($"https://httpstatuses.io/{(int)status}", json.GetProperty("type").GetString());
-        Assert.False(string.IsNullOrEmpty(json.GetProperty("traceId").GetString()));
-        Assert.True(json.TryGetProperty("title", out _));
-        return json;
-    }
+    private static Task<JsonElement> ProblemAsync(HttpResponseMessage res, HttpStatusCode status, string code) =>
+        res.AssertProblemAsync(status, code);
 
     private Task<HttpResponseMessage> PostRawAsync(string path, string body, string contentType = "application/json") =>
         _client.PostAsync(path, new StringContent(body, Encoding.UTF8, contentType));

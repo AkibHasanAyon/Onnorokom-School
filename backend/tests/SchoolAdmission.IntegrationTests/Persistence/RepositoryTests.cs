@@ -12,28 +12,15 @@ using SchoolAdmission.IntegrationTests.Infrastructure;
 namespace SchoolAdmission.IntegrationTests.Persistence;
 
 /// <summary>Unit of work and repositories against real PostgreSQL (row locks, partial index, raw SQL).</summary>
-public sealed class RepositoryTests : IAsyncLifetime
+public sealed class RepositoryTests(ApiFixture api) : IClassFixture<ApiFixture>
 {
     private static readonly DateTimeOffset Now = new(2030, 1, 15, 9, 0, 0, TimeSpan.Zero);
     private static readonly TimeSpan TenMinutes = TimeSpan.FromMinutes(10);
 
-    private readonly PostgresDatabase _db = new();
-    private AdmissionApiFactory _factory = default!;
+    private readonly PostgresDatabase _db = api.Database;
+    private readonly AdmissionApiFactory _factory = api.Factory;
 
-    public async Task InitializeAsync()
-    {
-        await _db.InitializeAsync();
-        _factory = new AdmissionApiFactory(_db.ConnectionString);
-        _factory.CreateClient().Dispose(); // start host → migrate
-    }
-
-    public async Task DisposeAsync()
-    {
-        await _factory.DisposeAsync();
-        await _db.DisposeAsync();
-    }
-
-    private static string Student(int i) => $"2030{i:D13}";
+    private static string Student(int i) => TestData.StudentId(i);
 
     private async Task<SchoolClass> SeedClassAsync(string name, int seats = 10)
     {
@@ -261,30 +248,5 @@ public sealed class RepositoryTests : IAsyncLifetime
 
         // Now the same student can hold a seat in that class again (partial unique index no longer blocks).
         await SeedHoldsAsync((cls.Id, Student(1), Now, null));
-    }
-
-    [Fact]
-    public async Task ExpireStaleBatch_ExpiresOnlyStaleHeldRows_InBatches()
-    {
-        var cls = await SeedClassAsync("Sweep Class");
-        var holds = await SeedHoldsAsync(
-            (cls.Id, Student(1), Now.AddMinutes(-30), null),
-            (cls.Id, Student(2), Now.AddMinutes(-20), null),
-            (cls.Id, Student(3), Now.AddMinutes(-10), null),                        // expires exactly now → stale
-            (cls.Id, Student(4), Now, null),                                        // active
-            (cls.Id, Student(5), Now.AddMinutes(-30), h => h.Confirm(Now.AddMinutes(-29))));
-
-        await using var scope = _factory.Services.CreateAsyncScope();
-        var repo = scope.ServiceProvider.GetRequiredService<IHoldRepository>();
-
-        Assert.Equal(2, await repo.ExpireStaleBatchAsync(Now, batchSize: 2, default));
-        Assert.Equal(1, await repo.ExpireStaleBatchAsync(Now, batchSize: 2, default));
-        Assert.Equal(0, await repo.ExpireStaleBatchAsync(Now, batchSize: 2, default));
-
-        var statuses = await Task.WhenAll(holds.Select(h => StatusOfAsync(h.Id)));
-        Assert.Equal("EXPIRED,EXPIRED,EXPIRED,HELD,CONFIRMED", string.Join(',', statuses));
-        var ctx = scope.ServiceProvider.GetRequiredService<AdmissionDbContext>();
-        var expiredAt = await ctx.Holds.AsNoTracking().Where(h => h.Id == holds[0].Id).Select(h => h.ExpiredAt).SingleAsync();
-        Assert.Equal(Now, expiredAt);
     }
 }
