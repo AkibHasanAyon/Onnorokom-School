@@ -1,10 +1,10 @@
 # todo.md — Project Log
 
 ## Current Status
-Phase 08 (Backend hardening) is pushed and merged into `main`. Phases 00–07 are merged: the complete backend (all 8 contract endpoints, class-row locking proven under bursts, ownership, idempotency, automatic expiry at query time + background sweeper). The robustness matrix (Testing_QA.md §4.6 + hostile extras, 85 cases) is committed and green; it found one real R7 bug — a NUL character in a class name → 500 (PostgreSQL 22021) — plus control characters being accepted in names; both are fixed: names with control characters → 400, and the unit of work now maps PostgreSQL encoding/length errors to 400 as a safety net. Logs now show student ids masked (`*************7890`) on every use-case line, and one structured line per HTTP request (method, path, status, duration — never headers or bodies); a Trace-level capture test proves no full id reaches any log, including MVC's own argument logging. Data and rules survive an application restart (fresh host on the same database reads back identical responses and keeps enforcing R1/R3/R4; a hold that expired while the app was down is EXPIRED with its seat free). The backend is feature-complete for the brief. Tests: 123 unit + 348 integration passing. Next: Phase 09, frontend foundation (Vite React TS scaffold, API client, layout, nginx + compose).
+Phase 09 (Frontend foundation) in progress on `phase/09-frontend-foundation`. The backend is complete and merged (Phases 00–08: all 8 contract endpoints, row-locked seat limit proven under bursts, automatic expiry, robustness matrix, masked logging, restart persistence; 123 unit + 348 integration tests). The frontend is scaffolded: Vite 8 + React 19 + TypeScript 7 (strict) with React Router 7, TanStack Query 5, Vitest + Testing Library + MSW 2 (dev); `npm run typecheck/lint/test/build` all pass in node:22-alpine. Next: runtime config, API client and contract types.
 
 ## In Progress
-- Phase 09 — Frontend foundation: not started (waiting for "continue")
+- Phase 09 — Frontend foundation: 09.2 `feat(frontend): add runtime config, API client and contract types`
 
 ## Pending / Upcoming
 
@@ -56,7 +56,7 @@ Phase 08 (Backend hardening) is pushed and merged into `main`. Phases 00–07 ar
 - [x] 08.4 test(infra): verify data persists across application restarts
 
 ### 09 — Frontend foundation (`phase/09-frontend-foundation`)
-- [ ] 09.1 chore(frontend): scaffold Vite React TypeScript app
+- [x] 09.1 chore(frontend): scaffold Vite React TypeScript app
 - [ ] 09.2 feat(frontend): add runtime config, API client and contract types
 - [ ] 09.3 feat(frontend): add layout, routing, error boundary and query client
 - [ ] 09.4 build(docker): serve frontend with nginx and add to compose
@@ -101,7 +101,7 @@ Phase 08 (Backend hardening) is pushed and merged into `main`. Phases 00–07 ar
 | 06 — Hold lifecycle | phase/06-hold-lifecycle | 3/3 (91f7a59, a7ecb56, bae7258) | ✅ 105 unit + 234 integration (Docker, real PostgreSQL) | ✅ | ✅ |
 | 07 — Automatic expiry | phase/07-expiry | 2/2 (dfd965e, c632a29) | ✅ 105 unit + 250 integration (Docker, real PostgreSQL) | ✅ | ✅ |
 | 08 — Backend hardening | phase/08-hardening | 4/4 (be6f92d, a7180c4, f3036c5, 8883fdd) | ✅ 123 unit + 348 integration (Docker, real PostgreSQL) | ✅ | ✅ |
-| 09 — Frontend foundation | phase/09-frontend-foundation | 0/4 | | | |
+| 09 — Frontend foundation | phase/09-frontend-foundation | 1/4 | | | |
 | 10 — Identity & classes UI | phase/10-classes-ui | 0/3 | | | |
 | 11 — Applications UI | phase/11-applications-ui | 0/3 | | | |
 | 12 — Frontend tests | phase/12-frontend-tests | 0/4 | | | |
@@ -110,7 +110,8 @@ Phase 08 (Backend hardening) is pushed and merged into `main`. Phases 00–07 ar
 
 ## Done Log
 (Times are the git commit times, `git log --date=format:"%Y-%m-%d %H:%M"`.)
-- 2026-11-10 01:55 — 08 merge — full verification on 8883fdd (fresh volume; `docker compose --profile test run --rm backend-tests`: 123 unit + 348 integration passed, exit 0, no MSB warnings; real Kestrel: bad JSON, NUL name, `/classes/%00`, Bengali header → 400; `docker compose stop db` → /classes, /classes/{id}, /me/holds, apply → 503 SERVICE_UNAVAILABLE and /health → 503, recovered to 200 after `start db`; data still present after `down` + `up`; 0 full student ids in logs; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/08-hardening, merged --no-ff into main, Git History row updated in the merge commit — merge commit (hash in next phase)
+- 2026-11-10 02:02 — 09.1 — `frontend/` from create-vite 9 (react-ts): React 19.3, react-router 7.18, @tanstack/react-query 5.107; dev: Vite 8.3, TypeScript 7.0 (`strict` + `noUncheckedIndexedAccess` added), oxlint, Vitest 5.1 + jsdom, Testing Library (react, user-event, jest-dom), msw 2.15; scripts dev/build/preview/test/typecheck/lint; Vitest config (jsdom, setup with jest-dom + cleanup + localStorage reset); template demo removed; minimal App + smoke test; package-lock.json committed — in node:22-alpine: typecheck 0 errors, lint 0 warnings, `npm test -- --run` 1 passed, `npm run build` OK — (this commit)
+- 2026-11-10 01:55 — 08 merge — full verification on 8883fdd (fresh volume; `docker compose --profile test run --rm backend-tests`: 123 unit + 348 integration passed, exit 0, no MSB warnings; real Kestrel: bad JSON, NUL name, `/classes/%00`, Bengali header → 400; `docker compose stop db` → /classes, /classes/{id}, /me/holds, apply → 503 SERVICE_UNAVAILABLE and /health → 503, recovered to 200 after `start db`; data still present after `down` + `up`; 0 full student ids in logs; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/08-hardening, merged --no-ff into main, Git History row updated in the merge commit — 2c6f8e2
 - 2026-11-10 01:52 — 08.4 — Persistence/RestartPersistenceTests: host A creates a class + held/confirmed/cancelled holds, is disposed; independent host B on the same database returns byte-identical responses (minus serverTime) for /classes, the class, all three holds and /me/holds, does not re-run migrations, still enforces ACTIVE_HOLD_EXISTS / ALREADY_ADMITTED / NO_SEATS_AVAILABLE, lets the pre-restart hold be paid, keeps counts and the invariant; a hold whose deadline passes while the app is down is EXPIRED after restart, its seat goes to another student, and its owner still sees it — clean build 0 warnings; `dotnet test` ×4: UnitTests 123 passed, IntegrationTests 348 passed, 0 failed; no leftover test DBs — 8883fdd
 - 2026-11-10 01:49 — 08.3 — StudentIdMask (13 stars + last 4; missing → "(none)", invalid → "(invalid)", never echoed), IStudentRequest on create/confirm/cancel/my-holds, LoggingBehavior logs "{Request} for student {masked} succeeded/rejected with {Code}/failed in {ms}", StudentIdHeader binding type (masked ToString, MVC TryParse binding) used by HoldsController/MeController, AddHttpLogging (method, path, status, duration; combined) + UseHttpLogging outermost, HttpLoggingMiddleware category at Information — clean build 0 warnings; `dotnet test` ×3: UnitTests 123 passed (9 new mask cases), IntegrationTests 346 passed (3 new LoggingTests capturing every category at Trace: no full id anywhere, masked ids + outcomes present, every request logged with status + duration), 0 failed; Docker logs: masked ids and request lines, 0 full ids — f3036c5
 - 2026-11-10 01:42 — 08.2 — CreateClassCommandValidator rejects control characters (after trimming; NUL, BEL, ESC, inner line breaks, DEL, C1) → 400 VALIDATION_FAILED "Name must not contain control characters."; UnitOfWork also maps 22021/22P05/22001 to 400 (defence in depth, logged as a missing validation rule); tests: 9 validator cases (+ Bengali, emoji, edge whitespace valid), ClassNameTextTests (NUL → 400 and nothing stored, printable Unicode round-trips exactly, edge tabs/CRLF trimmed), 3 matrix cases restored — clean build 0 warnings; `dotnet test` ×3 on the final code: UnitTests 114 passed, IntegrationTests 343 passed, 0 failed; Docker curl: NUL name → 400 (was 500); mutation check: with the validator rule removed, a NUL name still gets 400 VALIDATION_FAILED via the unit-of-work fallback — a7180c4
@@ -195,6 +196,8 @@ Phase 08 (Backend hardening) is pushed and merged into `main`. Phases 00–07 ar
 - **Class names may not contain control characters** (after trimming). Added to both ASSUMPTIONS.md files as item 6.
 - **X-Student-Id binds to a `StudentIdHeader` wrapper type** whose `ToString()` is masked. MVC's `ControllerActionInvoker` logs action arguments at Trace level, so a plain `string` parameter put the full number in logs whenever Trace was on. Validation still happens in the Application layer (400 INVALID_STUDENT_ID).
 - **Request logging uses ASP.NET Core's built-in HTTP logging** restricted to method, path, status and duration (combined into one entry). Paths contain only class/hold UUIDs, never student ids.
+- **Frontend tool versions.** MSW pinned to 2.x (the spec says MSW v2; 3.x exists). React Router 7.x (the latest major is 8; 7 matches the documented API). TypeScript 7 and oxlint come from the current create-vite template; `strict` and `noUncheckedIndexedAccess` were added because the template doesn't enable them. All run in `node:22-alpine` (local Node is 24).
+- **Vitest + Testing Library are set up in 09.1**, so every frontend commit from Phase 09 on ships tests (Git_Workflow §4 runs frontend tests from Phase 09). 12.1 still adds the MSW server, request handlers and the render helper.
 - **ASSUMPTIONS.md scope.** Only product/spec interpretations go into both ASSUMPTIONS.md files; git/tooling decisions are logged here only, to keep the graded ASSUMPTIONS.md short and on-topic.
 
 ## AI Mistakes & Fixes
