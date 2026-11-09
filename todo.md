@@ -1,10 +1,10 @@
 # todo.md — Project Log
 
 ## Current Status
-Phase 07 (Automatic expiry) is pushed and merged into `main`. Phases 00–06 are merged: all 8 contract endpoints with class-row locking (proven under bursts), ownership checks, idempotent confirm/cancel and effective expiry at query time. `HoldExpirySweeper` (BackgroundService) now sends `ExpireStaleHoldsCommand` every HOLD_SWEEP_INTERVAL_SECONDS (default 5) to store EXPIRED on stale holds (batches of 500, SKIP LOCKED, errors logged and retried); HOLD_SWEEPER_ENABLED=false disables it (tests). Expiry is tested end to end with FakeTimeProvider: statuses and seats flip exactly at expiresAt with no sweeper, the sweeper only rewrites stored rows, the real background sweeper ticks on its interval, failures don't stop it, and parallel sweepers split the work. Tests: 105 unit + 250 integration passing (6 consecutive green runs). Next: Phase 08, backend hardening (robustness matrix, log masking, persistence test).
+Phase 08 (Backend hardening) in progress on `phase/08-hardening`. Phases 00–07 are merged: the complete backend (all 8 contract endpoints, class-row locking proven under bursts, ownership, idempotency, automatic expiry at query time + background sweeper). The robustness matrix (Testing_QA.md §4.6 + hostile extras, 85 cases) is committed and green; it found one real R7 bug — a NUL character in a class name → 500 (PostgreSQL 22021) — plus control characters being accepted in names; both are fixed in 08.2. Tests: 105 unit + 335 integration passing. Next: the name fix, then log masking + request logging, then a restart-persistence test.
 
 ## In Progress
-- Phase 08 — Backend hardening: not started (waiting for "continue")
+- Phase 08 — Backend hardening: 08.2 `fix(api): reject control characters in class names`
 
 ## Pending / Upcoming
 
@@ -50,8 +50,8 @@ Phase 07 (Automatic expiry) is pushed and merged into `main`. Phases 00–06 are
 - [x] 07.2 test(holds): verify expiry timing with fake time provider
 
 ### 08 — Backend hardening (`phase/08-hardening`)
-- [ ] 08.1 test(api): guarantee 4xx for invalid input on all endpoints
-- [ ] 08.2 fix(api): fixes found by the robustness matrix (or refactor(api) if none)
+- [x] 08.1 test(api): guarantee 4xx for invalid input on all endpoints
+- [ ] 08.2 fix(api): reject control characters in class names (found by the robustness matrix)
 - [ ] 08.3 feat(app): mask student ids in logs and add request logging
 - [ ] 08.4 test(infra): verify data persists across application restarts
 
@@ -100,7 +100,7 @@ Phase 07 (Automatic expiry) is pushed and merged into `main`. Phases 00–06 are
 | 05 — Holds & concurrency | phase/05-holds-concurrency | 3/3 (4232a0b, 8dd9c74, 58ddecc) | ✅ 96 unit + 179 integration (Docker, real PostgreSQL) | ✅ | ✅ |
 | 06 — Hold lifecycle | phase/06-hold-lifecycle | 3/3 (91f7a59, a7ecb56, bae7258) | ✅ 105 unit + 234 integration (Docker, real PostgreSQL) | ✅ | ✅ |
 | 07 — Automatic expiry | phase/07-expiry | 2/2 (dfd965e, c632a29) | ✅ 105 unit + 250 integration (Docker, real PostgreSQL) | ✅ | ✅ |
-| 08 — Backend hardening | phase/08-hardening | 0/4 | | | |
+| 08 — Backend hardening | phase/08-hardening | 1/4 | | | |
 | 09 — Frontend foundation | phase/09-frontend-foundation | 0/4 | | | |
 | 10 — Identity & classes UI | phase/10-classes-ui | 0/3 | | | |
 | 11 — Applications UI | phase/11-applications-ui | 0/3 | | | |
@@ -110,7 +110,8 @@ Phase 07 (Automatic expiry) is pushed and merged into `main`. Phases 00–06 are
 
 ## Done Log
 (Times are the git commit times, `git log --date=format:"%Y-%m-%d %H:%M"`.)
-- 2026-11-10 01:25 — 07 merge — full verification on c632a29 (fresh volume; `docker compose --profile test run --rm backend-tests`: 105 unit + 250 integration passed, exit 0, no MSB warnings; real stack with HOLD_DURATION_SECONDS=30: HELD at 29 s, EXPIRED + seat available at 31 s, stored row EXPIRED after the next sweep, 0 fail/crit log lines; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/07-expiry, merged --no-ff into main, Git History row updated in the merge commit — merge commit (hash in next phase)
+- 2026-11-10 01:35 — 08.1 — Robustness/RobustnessMatrixTests: `[Theory]` + `[MemberData]` over Testing_QA.md §4.6 (every listed input for all 8 endpoints + unknown route/405) plus hostile extras (json null/bool/object/array types, -0.0, int overflow, trailing comma, comments, truncated, two documents, 5000-deep nesting, bare values, xml/form/unknown charset → 415, lone surrogates → MALFORMED_JSON, 4000-char and SQL-ish ids, 10k-digit and control-char headers, not-owner with garbage body), each asserting 4xx + problem+json (+ exact status/code where specified); invalid UTF-8 bytes, 1 MB header, HEAD/OPTIONS/TRACE never 5xx; matrix replay keeps counts + invariant; ApiFixture lifecycle made virtual (RobustnessFixture seeds a class + hold) — clean build 0 warnings; `dotnet test` ×3: UnitTests 105 passed, IntegrationTests 335 passed (85 new), 0 failed. Found (fixed in 08.2): NUL in class name → 500, control chars accepted — (this commit)
+- 2026-11-10 01:25 — 07 merge — full verification on c632a29 (fresh volume; `docker compose --profile test run --rm backend-tests`: 105 unit + 250 integration passed, exit 0, no MSB warnings; real stack with HOLD_DURATION_SECONDS=30: HELD at 29 s, EXPIRED + seat available at 31 s, stored row EXPIRED after the next sweep, 0 fail/crit log lines; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/07-expiry, merged --no-ff into main, Git History row updated in the merge commit — 15cd683
 - 2026-11-10 01:22 — 07.2 — Expiry/ExpiryTimingTests (expires at the deadline with sweeper off: GET hold, my-holds and seat counts flip while the stored row stays HELD; 1 s before still HELD; confirm/cancel after expiry → 409 HOLD_EXPIRED; re-apply after expiry; ExpireStaleHoldsCommand stores EXPIRED + expired_at at clock time, leaves confirmed/cancelled/fresh holds, changes nothing clients see, second sweep 0; not-yet-expired holds untouched) + ConfiguredDurationExpiryTests (30 s); Expiry/SweeperTests (real BackgroundService on a 1 s interval stores EXPIRED after the fake clock passes expiry; disabled sweeper never touches rows while seats still return; 6 parallel sweepers over 300 stale holds expire each exactly once; 10 confirms racing 5 sweeps at expiresAt → all HOLD_EXPIRED); Expiry/HoldExpirySweeperUnitTests (sweep at start + once per interval, survives a failing sweep, disabled never sweeps, drains full batches until a short one, stops at the 20-batch cap); AdmissionApiFactory/ApiFixture accept sweeper settings — clean build 0 warnings; `dotnet test` ×6: UnitTests 105 passed, IntegrationTests 250 passed, 0 failed; no leftover test DBs — c632a29
 - 2026-11-10 01:17 — 07.1 — ExpireStaleHoldsCommand + handler (batch size ≥ 1, repository SKIP LOCKED batch at the injected clock), HoldExpirySweeper BackgroundService (PeriodicTimer on TimeProvider, sweep at start then every interval, drains up to 20×500 per tick, logs + retries on failure, honours HOLD_SWEEPER_ENABLED), registered via AddInfrastructure; Microsoft.Extensions.Hosting.Abstractions 10.0.14 — clean build 0 warnings; `dotnet test`: UnitTests 105 passed, IntegrationTests 234 passed, 0 failed; Docker with HOLD_DURATION_SECONDS=3 / HOLD_SWEEP_INTERVAL_SECONDS=1: stored HELD → EXPIRED (expired_at set) within ~1 s of expiry, "Expired 1 stale hold(s)" logged, 0 fail/crit lines — dfd965e
 - 2026-11-10 01:13 — 06 merge — full verification on bae7258 (fresh volume; `docker compose --profile test run --rm backend-tests`: 105 unit + 234 integration passed, exit 0, no MSB warnings; real stack with HOLD_DURATION_SECONDS=5: 2-seat class, third student → NO_SEATS_AVAILABLE, A confirms → 200, B after 6 s → EXPIRED and confirm → 409 HOLD_EXPIRED, counts confirmed 1 / available 1, A's CONFIRMED application still listed after `down` + `up`, 0 fail/crit log lines; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/06-hold-lifecycle, merged --no-ff into main, Git History row updated in the merge commit — ee6c47e
@@ -184,6 +185,9 @@ Phase 07 (Automatic expiry) is pushed and merged into `main`. Phases 00–06 are
 - **Mutation check for the concurrency tests.** Temporarily removing `FOR UPDATE` made every burst test fail (114 holds for 25 seats), proving the tests detect overselling rather than passing by luck. The check was run once and not committed.
 - **Hold ids use the exact (millisecond) time for UUIDv7** while `createdAt` stays whole seconds. `GET /me/holds` orders by `createdAt DESC, id DESC`, so two applications made in the same second still list newest first.
 - **Sweeper drains up to 20 batches of 500 per tick** (Implementation.md §R7 sends one batch per tick). After a big burst expires at once, stored statuses catch up within one tick instead of 500 rows every 5 s. The 10,000-row cap keeps one tick short. Correctness never depends on the sweeper.
+- **Planned 08.2 message made concrete:** `fix(api): reject control characters in class names` (the plan has a `<fixes found by the robustness matrix>` placeholder). The failing matrix cases ship with that fix rather than in 08.1, so every commit stays green.
+- **`/classes/%00` is not in the TestServer matrix.** TestServer throws client-side ("path contains null characters"). Real Kestrel answers 400 with an empty body at the protocol level, before any middleware, so no problem+json is possible there. Verified with curl; still 4xx, never 5xx.
+- **Unknown request charset → 415** (`application/json; charset=klingon`); **lone UTF-16 surrogates in JSON → 400 MALFORMED_JSON** (System.Text.Json rejects them). Both are correct 4xx; the first matrix draft expected other codes.
 - **ASSUMPTIONS.md scope.** Only product/spec interpretations go into both ASSUMPTIONS.md files; git/tooling decisions are logged here only, to keep the graded ASSUMPTIONS.md short and on-topic.
 
 ## AI Mistakes & Fixes

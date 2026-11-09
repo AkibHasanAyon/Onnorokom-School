@@ -29,7 +29,7 @@ public class ApiFixture : IAsyncLifetime
     /// <summary>Hook for fixtures that need extra test services (e.g. a probe controller).</summary>
     protected virtual WebApplicationFactory<Program> Customize(AdmissionApiFactory factory) => factory;
 
-    public async Task InitializeAsync()
+    public virtual async Task InitializeAsync()
     {
         await Database.InitializeAsync();
         Factory = new AdmissionApiFactory(Database.ConnectionString, HoldSeconds, SweeperEnabled, SweepIntervalSeconds);
@@ -37,7 +37,7 @@ public class ApiFixture : IAsyncLifetime
         Client = Host.CreateClient(); // starts the host → runs migrations
     }
 
-    public async Task DisposeAsync()
+    public virtual async Task DisposeAsync()
     {
         Client.Dispose();
         if (!ReferenceEquals(Host, Factory)) await Host.DisposeAsync();
