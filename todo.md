@@ -1,10 +1,10 @@
 # todo.md — Project Log
 
 ## Current Status
-Phase 03 in progress on `phase/03-app-plumbing`. Phases 00–02 are merged (domain, EF model, migration, startup migrator, DB health check). Application plumbing so far: `ICommand`/`IQuery`, MediatR pipeline (Logging → Validation → Transaction for commands only), app exceptions (NotFound/Forbidden/Conflict/RequestValidation/ServiceUnavailable), `HoldOptions` bound from `HOLD_*` env vars with fail-fast validation, `TruncateToSeconds`, `RouteId`, the shared X-Student-Id rule. Tests: 77 unit + 33 integration passing. Next: EF unit of work (READ COMMITTED, unique-violation → 409), class/hold repositories with row locks.
+Phase 03 in progress on `phase/03-app-plumbing`. Phases 00–02 are merged (domain, EF model, migration, startup migrator, DB health check). Application plumbing so far: `ICommand`/`IQuery`, MediatR pipeline (Logging → Validation → Transaction for commands only), app exceptions (NotFound/Forbidden/Conflict/RequestValidation/ServiceUnavailable), `HoldOptions` bound from `HOLD_*` env vars with fail-fast validation, `TruncateToSeconds`, `RouteId`, the shared X-Student-Id rule. EF `UnitOfWork` (READ COMMITTED; unique violations → 409 `CLASS_NAME_EXISTS`/`ACTIVE_HOLD_EXISTS`, check violations → 400) and the class/hold repositories (`FOR UPDATE` row locks, derived seat counts, stale-hold expiry, `SKIP LOCKED` sweep batch) are in place. Tests: 77 unit + 44 integration passing. Next: problem+json error handling, JSON timestamp conventions, CORS, 64 KB body limit.
 
 ## In Progress
-- Phase 03 — Application plumbing: 03.2 `feat(infra): add unit of work, repositories and constraint translation`
+- Phase 03 — Application plumbing: 03.3 `feat(api): add problem-details errors, JSON conventions and CORS`
 
 ## Pending / Upcoming
 
@@ -26,7 +26,7 @@ Phase 03 in progress on `phase/03-app-plumbing`. Phases 00–02 are merged (doma
 
 ### 03 — Application plumbing (`phase/03-app-plumbing`)
 - [x] 03.1 feat(app): add CQRS abstractions and MediatR pipeline behaviors
-- [ ] 03.2 feat(infra): add unit of work, repositories and constraint translation
+- [x] 03.2 feat(infra): add unit of work, repositories and constraint translation
 - [ ] 03.3 feat(api): add problem-details errors, JSON conventions and CORS
 - [ ] 03.4 test: add integration test harness with real PostgreSQL
 
@@ -95,7 +95,7 @@ Phase 03 in progress on `phase/03-app-plumbing`. Phases 00–02 are merged (doma
 | 00 — Repository bootstrap | phase/00-bootstrap | 3/3 (c925994, 61a6a72, a95d5a1) | n/a (docs only) | ✅ | ✅ |
 | 01 — Backend skeleton & Docker | phase/01-backend-skeleton | 3/3 (797a484, 836e02e, d597e04) | ✅ 1 passed (Docker) | ✅ | ✅ |
 | 02 — Domain & persistence | phase/02-domain-persistence | 4/4 (53a7d5a, a23bc5b, 16442dd, c07ff0a) | ✅ 44 unit + 33 integration (Docker, real PostgreSQL) | ✅ | ✅ |
-| 03 — Application plumbing | phase/03-app-plumbing | 1/4 | | | |
+| 03 — Application plumbing | phase/03-app-plumbing | 2/4 (bd437fd, 03.2) | | | |
 | 04 — Classes | phase/04-classes | 0/3 | | | |
 | 05 — Holds & concurrency | phase/05-holds-concurrency | 0/3 | | | |
 | 06 — Hold lifecycle | phase/06-hold-lifecycle | 0/3 | | | |
@@ -110,7 +110,8 @@ Phase 03 in progress on `phase/03-app-plumbing`. Phases 00–02 are merged (doma
 
 ## Done Log
 (Times are the git commit times, `git log --date=format:"%Y-%m-%d %H:%M"`.)
-- 2026-11-10 00:05 — 03.1 — Application: ICommand/ICommandMarker/IQuery, IUnitOfWork + IUnitOfWorkTransaction, Logging/Validation/Transaction behaviors (registered in that order), AppException hierarchy + RequestValidationException (INVALID_STUDENT_ID vs VALIDATION_FAILED, camelCase field errors), ServiceUnavailableException, HoldOptions (env binding, 1..86400 / 1..300, ValidateOnStart), TruncateToSeconds, RouteId, StudentIdRules; AddApplication wired in Program — `dotnet test` (sdk:10.0 + PostgreSQL 17): UnitTests 77 passed (33 new: behaviors, options, rules, helpers), IntegrationTests 33 passed, 0 failed — (this commit)
+- 2026-11-10 00:08 — 03.2 — Application `IClassRepository`/`IHoldRepository` (+ `SeatCounts`); Infrastructure `UnitOfWork` (READ COMMITTED tx, 23505 → ConflictException by constraint name, 23514 → 400), `ClassRepository`/`HoldRepository` per Database.md §5 (FromSql FOR UPDATE without LINQ composition, ExecuteUpdate stale-hold expiry, SKIP LOCKED batch), DI registrations — `dotnet test` (PostgreSQL 17): UnitTests 77 passed, IntegrationTests 44 passed (11 new RepositoryTests: 409 translation ×2, rollback/commit, class + hold row locks verified from a second connection with lock_timeout, seat counts incl. exactly-at-expiry, find active/confirmed, stale-hold expiry scope, sweep batches), 0 failed — (this commit)
+- 2026-11-10 00:05 — 03.1 — Application: ICommand/ICommandMarker/IQuery, IUnitOfWork + IUnitOfWorkTransaction, Logging/Validation/Transaction behaviors (registered in that order), AppException hierarchy + RequestValidationException (INVALID_STUDENT_ID vs VALIDATION_FAILED, camelCase field errors), ServiceUnavailableException, HoldOptions (env binding, 1..86400 / 1..300, ValidateOnStart), TruncateToSeconds, RouteId, StudentIdRules; AddApplication wired in Program — `dotnet test` (sdk:10.0 + PostgreSQL 17): UnitTests 77 passed (33 new: behaviors, options, rules, helpers), IntegrationTests 33 passed, 0 failed — bd437fd
 - 2026-11-09 23:57 — 02 merge — full verification on c07ff0a (`docker compose --profile test run --rm backend-tests`: 44 unit + 33 integration passed, exit 0; `docker compose up --build -d` + `curl /health` → 200; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/02-domain-persistence, merged --no-ff into main, Git History row updated in the merge commit — b206b7e
 - 2026-11-09 23:55 — 02.4 — `InitialCreate` migration (generated with dotnet-ef 10.0.14 in the SDK container, matches Database.md §2), `DatabaseMigrator` (connect retry 15×2 s, `pg_advisory_lock(7272026)`, creates history table first, `MigrateAsync`), Program migrates before `Run`, `IDatabaseHealthCheck` + `/health` → 503 when the DB is unreachable (3 s probe timeout); test harness: `PostgresDatabase` (throwaway `test_<guid>` DB) + `AdmissionApiFactory`; tests: migration applied, two instances starting together migrate once, restart keeps data, status stored as "HELD", partial unique index + case-insensitive class name index enforced, health 200/503 — `dotnet test` against PostgreSQL 17 (compose network): UnitTests 44 passed, IntegrationTests 33 passed, 0 failed; Docker stack: fresh volume migrates with no error logs, health 200, `down`+`up` keeps rows, `stop db` → 503, `start db` → 200 — c07ff0a
 - 2026-11-09 23:47 — 02.3 — Infrastructure: AdmissionDbContext, SchoolClassConfiguration, HoldConfiguration, HoldStatusConverter (Held ↔ "HELD"), AddInfrastructure (Npgsql, no retry strategy), wired in Program — `dotnet test`: UnitTests 44 passed, IntegrationTests 27 passed (26 new ModelTests cases checking generated DDL vs Database.md §2), 0 failed — 16442dd
@@ -145,6 +146,7 @@ Phase 03 in progress on `phase/03-app-plumbing`. Phases 00–02 are merged (doma
 - **Read stores (`IClassReadStore`, `IHoldReadStore`) are added with their first query** (Phases 04 and 06), because they return DTOs that don't exist yet. 03.2 adds the unit of work and the write-side repositories only.
 - **Validation error key for the header is `X-Student-Id`** (not camel-cased); body fields are camelCase like the JSON (`totalSeats`).
 - **Behaviors forward the `CancellationToken` to `next(...)`** (MediatR 12.5's delegate accepts one) so request aborts reach the handler.
+- **Check-violation (23514) → 400 translation has no automated test**: the domain guards make it unreachable through the public model, so a test would need reflection hacks. It stays as a safety net and is logged as an error if it ever fires.
 - **ASSUMPTIONS.md scope.** Only product/spec interpretations go into both ASSUMPTIONS.md files; git/tooling decisions are logged here only, to keep the graded ASSUMPTIONS.md short and on-topic.
 
 ## AI Mistakes & Fixes
