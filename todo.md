@@ -1,10 +1,10 @@
 # todo.md — Project Log
 
 ## Current Status
-Phase 05 (Holds & concurrency) is pushed and merged into `main`. Phases 00–04 are merged: domain + EF model + migrations, MediatR pipeline, row-locking repositories, problem+json errors, CORS, 64 KB limit, real-PostgreSQL test harness, and the class endpoints (create/list/detail with live seat counts). `POST /classes/{id}/holds` now works: X-Student-Id → 400, unknown class → 404, then under the class-row lock: ALREADY_ADMITTED / ACTIVE_HOLD_EXISTS (+ existingHoldId) / NO_SEATS_AVAILABLE → 409, else 201 + Location with expiresAt = createdAt + HOLD_DURATION_SECONDS. Concurrency is proven: 6 burst tests (200 students vs 25 seats → exactly 25×201; 1 seat; same student ×50; 3 classes at once; repeat applicants; refill after expiry) all keep R1+R3, never 5xx, and fail when the row lock is removed (mutation check). The create-hold contract (exact fields, Location, whole-second UTC timestamps, expiresAt = createdAt + HOLD_DURATION_SECONDS, body ignored) and the full check order (400 → 404 → ALREADY_ADMITTED → ACTIVE_HOLD_EXISTS → NO_SEATS_AVAILABLE, re-apply after cancel/expiry) are tested. Tests: 96 unit + 179 integration passing (3 consecutive green runs). Next: Phase 06, hold lifecycle (GET hold, my holds, confirm, cancel).
+Phase 06 (Hold lifecycle) in progress on `phase/06-hold-lifecycle`. Phases 00–05 are merged: full backend plumbing, class endpoints, and `POST /classes/{id}/holds` with class-row locking proven under concurrent bursts (mutation-checked). `GET /holds/{id}` (no header; malformed/unknown → 404 HOLD_NOT_FOUND) and `GET /me/holds` (X-Student-Id → 400; newest first; all statuses) now work, both reporting the effective status (HELD past expiresAt → EXPIRED). Tests: 105 unit + 179 integration passing (endpoint tests follow in 06.3). Next: confirm and cancel with ownership checks.
 
 ## In Progress
-- Phase 06 — Hold lifecycle: not started (waiting for "continue")
+- Phase 06 — Hold lifecycle: 06.2 `feat(holds): add confirm and cancel with ownership checks`
 
 ## Pending / Upcoming
 
@@ -41,7 +41,7 @@ Phase 05 (Holds & concurrency) is pushed and merged into `main`. Phases 00–04 
 - [x] 05.3 test(holds): add duplicate-application and hold contract tests
 
 ### 06 — Hold lifecycle (`phase/06-hold-lifecycle`)
-- [ ] 06.1 feat(holds): add hold status and my-holds queries
+- [x] 06.1 feat(holds): add hold status and my-holds queries
 - [ ] 06.2 feat(holds): add confirm and cancel with ownership checks
 - [ ] 06.3 test(holds): cover lifecycle, ownership and idempotent confirm
 
@@ -98,7 +98,7 @@ Phase 05 (Holds & concurrency) is pushed and merged into `main`. Phases 00–04 
 | 03 — Application plumbing | phase/03-app-plumbing | 4/4 (bd437fd, f60470f, 7cd9ee1, 6e5c70e) | ✅ 77 unit + 79 integration (Docker, real PostgreSQL) | ✅ | ✅ |
 | 04 — Classes | phase/04-classes | 3/3 (0717163, 9faa353, 8c88aa2) | ✅ 96 unit + 134 integration (Docker, real PostgreSQL) | ✅ | ✅ |
 | 05 — Holds & concurrency | phase/05-holds-concurrency | 3/3 (4232a0b, 8dd9c74, 58ddecc) | ✅ 96 unit + 179 integration (Docker, real PostgreSQL) | ✅ | ✅ |
-| 06 — Hold lifecycle | phase/06-hold-lifecycle | 0/3 | | | |
+| 06 — Hold lifecycle | phase/06-hold-lifecycle | 1/3 | | | |
 | 07 — Automatic expiry | phase/07-expiry | 0/2 | | | |
 | 08 — Backend hardening | phase/08-hardening | 0/4 | | | |
 | 09 — Frontend foundation | phase/09-frontend-foundation | 0/4 | | | |
@@ -110,7 +110,8 @@ Phase 05 (Holds & concurrency) is pushed and merged into `main`. Phases 00–04 
 
 ## Done Log
 (Times are the git commit times, `git log --date=format:"%Y-%m-%d %H:%M"`.)
-- 2026-11-10 00:56 — 05 merge — full verification on 58ddecc (fresh volume; `docker compose --profile test run --rm backend-tests`: 96 unit + 179 integration passed, exit 0, no MSB warnings; real stack: 60 parallel curl applications for 5 seats → exactly 5×201 + 55×409, class shows held 5 / available 0, 0 fail/crit log lines; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/05-holds-concurrency, merged --no-ff into main, Git History row updated in the merge commit — merge commit (hash in next phase)
+- 2026-11-10 01:00 — 06.1 — HoldStatusText (contract strings + effective status), GetHoldByIdQuery + HoldDto (contract + className/createdAt/confirmedAt/cancelledAt/serverTime), GetMyHoldsQuery + validator + MyHoldDto, IHoldReadStore + HoldReadStore (AsNoTracking join to classes, newest first by createdAt then UUIDv7 id), HoldsController GET /holds/{holdId}, MeController GET /me/holds; create-hold now derives the UUIDv7 from the exact (ms) time — clean build 0 warnings; `dotnet test`: UnitTests 105 passed (9 new status cases), IntegrationTests 179 passed, 0 failed; Docker curl: GET hold 200 with nulls for confirmedAt/cancelledAt, unknown → 404 HOLD_NOT_FOUND, me/holds newest first (two holds in the same second ordered correctly), no header → 400, unknown student → `[]` — (this commit)
+- 2026-11-10 00:56 — 05 merge — full verification on 58ddecc (fresh volume; `docker compose --profile test run --rm backend-tests`: 96 unit + 179 integration passed, exit 0, no MSB warnings; real stack: 60 parallel curl applications for 5 seats → exactly 5×201 + 55×409, class shows held 5 / available 0, 0 fail/crit log lines; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/05-holds-concurrency, merged --no-ff into main, Git History row updated in the merge commit — f625309
 - 2026-11-10 00:54 — 05.3 — Contract/CreateHoldContractTests (201 + Location + exact contract/extra fields, lowercase UUIDv7, whole-second UTC timestamps truncated not rounded, expiresAt − createdAt = 600 s, serverTime, trimmed studentId, any body/content type ignored, NO_SEATS detail names the class) + HoldDurationContractTests (HOLD_DURATION_SECONDS=30 → 30 s); Holds/CreateHoldRulesTests (11 bad headers → 400 creating nothing, 400 wins over unknown class, 5 bad class ids → 404, ACTIVE_HOLD_EXISTS + existingHoldId, ALREADY_ADMITTED + existingHoldId, ALREADY_ADMITTED and ACTIVE_HOLD_EXISTS win over NO_SEATS, full → NO_SEATS with no insert, re-apply after cancel, 599 s still active / at 600 s re-apply succeeds with old row stored EXPIRED, expired seat goes to another student, same student in two classes, counts + invariant, 405 on wrong methods) — clean build 0 warnings; `dotnet test` ×3: UnitTests 96 passed, IntegrationTests 179 passed, 0 failed; no leftover test DBs — 58ddecc
 - 2026-11-10 00:50 — 05.2 — Concurrency/SeatLimitConcurrencyTests in the Concurrency collection: 25 seats vs 200 students (25×201, 175×409 NO_SEATS_AVAILABLE, 25 rows), 1 seat vs 100, same student ×50 (1×201, 49×ACTIVE_HOLD_EXISTS), 3 classes × 100 students at once (each capped independently), 120 requests from 40 students (8 winners, all distinct), refill after expiry (exactly 10 freed seats reused); every test asserts no 5xx + DB invariant (R1, R3) at the fake clock; Burst helper (gate-released parallel requests), HoldAsync/CreateHoldIdAsync client helpers — clean build 0 warnings; `dotnet test` ×3: UnitTests 96 passed, IntegrationTests 140 passed, 0 failed; mutation check (FOR UPDATE removed): all 6 burst tests + lock test fail (e.g. 114 holds for 25 seats), lock restored — 8dd9c74
 - 2026-11-10 00:45 — 05.1 — CreateHoldCommand + validator (X-Student-Id) + HoldCreatedDto (contract fields + className/createdAt/serverTime), CreateHoldCommandHandler (RouteId → 404, class row FOR UPDATE, clock read after the lock, own stale hold → EXPIRED, R3 check with existingHoldId, derived seat count, insert), HoldsController `POST /classes/{classId}/holds` → 201 + Location (body ignored) — clean build 0 warnings; `dotnet test`: UnitTests 96 passed, IntegrationTests 134 passed, 0 failed; Docker curl: 201 + Location (trimmed studentId, expiresAt = createdAt + 600 s), repeat → 409 ACTIVE_HOLD_EXISTS + existingHoldId, full → 409 NO_SEATS_AVAILABLE, no header + unknown class → 400 (header checked first), unknown class → 404, counts held 1 / available 0 — 4232a0b
@@ -175,6 +176,7 @@ Phase 05 (Holds & concurrency) is pushed and merged into `main`. Phases 00–04 
 - **The create-hold route lives on `HoldsController`** as an absolute route (`[HttpPost("/classes/{classId}/holds")]`), so all hold use cases sit in one controller. The request body is never read, so any body or content type is ignored (API.md §4.4).
 - **"Mixed burst" split across phases.** Implementation.md 5.2(c) mixes create/cancel/confirm, but confirm and cancel only exist from Phase 06. 05.2 covers mixed create bursts (across classes, repeat applicants, after expiry); the create+confirm+cancel burst ships with the lifecycle tests in 06.3.
 - **Mutation check for the concurrency tests.** Temporarily removing `FOR UPDATE` made every burst test fail (114 holds for 25 seats), proving the tests detect overselling rather than passing by luck. The check was run once and not committed.
+- **Hold ids use the exact (millisecond) time for UUIDv7** while `createdAt` stays whole seconds. `GET /me/holds` orders by `createdAt DESC, id DESC`, so two applications made in the same second still list newest first.
 - **ASSUMPTIONS.md scope.** Only product/spec interpretations go into both ASSUMPTIONS.md files; git/tooling decisions are logged here only, to keep the graded ASSUMPTIONS.md short and on-topic.
 
 ## AI Mistakes & Fixes

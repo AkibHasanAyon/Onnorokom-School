@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IClassRepository, ClassRepository>();
         services.AddScoped<IHoldRepository, HoldRepository>();
         services.AddScoped<IClassReadStore, ClassReadStore>();
+        services.AddScoped<IHoldReadStore, HoldReadStore>();
         services.AddScoped<IDatabaseHealthCheck, DatabaseHealthCheck>();
 
         return services;

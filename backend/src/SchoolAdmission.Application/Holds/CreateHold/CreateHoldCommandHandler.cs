@@ -35,7 +35,8 @@ public sealed class CreateHoldCommandHandler(
 
         // Read the clock *after* acquiring the lock: a request that waited in the queue must not
         // count seats (or stamp createdAt) with a time from before it got its turn.
-        var now = clock.GetUtcNow().TruncateToSeconds();
+        var exact = clock.GetUtcNow();
+        var now = exact.TruncateToSeconds();
 
         // 2. A stored-HELD-but-expired hold of this student would block the partial unique index on re-apply.
         await holds.ExpireStaleHoldForStudentAsync(classId, studentId, now, cancellationToken);
@@ -59,7 +60,8 @@ public sealed class CreateHoldCommandHandler(
                 $"All seats in '{schoolClass.Name}' are currently held or confirmed.");
 
         // 5. Insert. TransactionBehavior saves and commits, which releases the class lock.
-        var hold = Hold.Create(Guid.CreateVersion7(now), schoolClass.Id, studentId, now,
+        // The id embeds the exact millisecond, so holds created in the same second still sort newest-first.
+        var hold = Hold.Create(Guid.CreateVersion7(exact), schoolClass.Id, studentId, now,
             TimeSpan.FromSeconds(options.Value.HoldDurationSeconds));
         holds.Add(hold);
 
