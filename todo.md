@@ -1,10 +1,10 @@
 # todo.md — Project Log
 
 ## Current Status
-Phase 04 (Classes) in progress on `phase/04-classes`. Phases 00–03 are merged: domain + EF model + migrations, MediatR pipeline (validation → 400, READ COMMITTED transactions), repositories with `FOR UPDATE` row locks, problem+json errors with stable codes, CORS, 64 KB limit, and a real-PostgreSQL integration-test harness. `POST /classes` now works: 201 + `Location`, trimmed name, 400 `VALIDATION_FAILED`/`MALFORMED_JSON`, 409 `CLASS_NAME_EXISTS` (case-insensitive), 413 over 64 KB (verified against real Kestrel). Tests: 92 unit + 79 integration passing. Next: `GET /classes` and `GET /classes/{id}` with derived seat counts.
+Phase 04 (Classes) in progress on `phase/04-classes`. Phases 00–03 are merged: domain + EF model + migrations, MediatR pipeline (validation → 400, READ COMMITTED transactions), repositories with `FOR UPDATE` row locks, problem+json errors with stable codes, CORS, 64 KB limit, and a real-PostgreSQL integration-test harness. `POST /classes` now works: 201 + `Location`, trimmed name, 400 `VALIDATION_FAILED`/`MALFORMED_JSON`, 409 `CLASS_NAME_EXISTS` (case-insensitive), 413 over 64 KB (verified against real Kestrel). `GET /classes` (oldest first) and `GET /classes/{id}` (malformed or unknown id → 404 `CLASS_NOT_FOUND`) return live seat accounting derived from `expiresAt` at query time. Tests: 96 unit + 79 integration passing. Next: contract and validation integration tests for the three class endpoints.
 
 ## In Progress
-- Phase 04 — Classes: 04.2 `feat(classes): add class list and detail queries with seat accounting`
+- Phase 04 — Classes: 04.3 `test(classes): add contract and validation tests for class endpoints`
 
 ## Pending / Upcoming
 
@@ -32,7 +32,7 @@ Phase 04 (Classes) in progress on `phase/04-classes`. Phases 00–03 are merged:
 
 ### 04 — Classes (`phase/04-classes`)
 - [x] 04.1 feat(classes): add create-class command with validation
-- [ ] 04.2 feat(classes): add class list and detail queries with seat accounting
+- [x] 04.2 feat(classes): add class list and detail queries with seat accounting
 - [ ] 04.3 test(classes): add contract and validation tests for class endpoints
 
 ### 05 — Holds & concurrency ⭐ (`phase/05-holds-concurrency`)
@@ -96,7 +96,7 @@ Phase 04 (Classes) in progress on `phase/04-classes`. Phases 00–03 are merged:
 | 01 — Backend skeleton & Docker | phase/01-backend-skeleton | 3/3 (797a484, 836e02e, d597e04) | ✅ 1 passed (Docker) | ✅ | ✅ |
 | 02 — Domain & persistence | phase/02-domain-persistence | 4/4 (53a7d5a, a23bc5b, 16442dd, c07ff0a) | ✅ 44 unit + 33 integration (Docker, real PostgreSQL) | ✅ | ✅ |
 | 03 — Application plumbing | phase/03-app-plumbing | 4/4 (bd437fd, f60470f, 7cd9ee1, 6e5c70e) | ✅ 77 unit + 79 integration (Docker, real PostgreSQL) | ✅ | ✅ |
-| 04 — Classes | phase/04-classes | 1/3 | | | |
+| 04 — Classes | phase/04-classes | 2/3 (0717163, 04.2) | | | |
 | 05 — Holds & concurrency | phase/05-holds-concurrency | 0/3 | | | |
 | 06 — Hold lifecycle | phase/06-hold-lifecycle | 0/3 | | | |
 | 07 — Automatic expiry | phase/07-expiry | 0/2 | | | |
@@ -110,7 +110,8 @@ Phase 04 (Classes) in progress on `phase/04-classes`. Phases 00–03 are merged:
 
 ## Done Log
 (Times are the git commit times, `git log --date=format:"%Y-%m-%d %H:%M"`.)
-- 2026-11-10 00:29 — 04.1 — CreateClassCommand (+ CreatedClassDto), validator (name required/≤100 after trim, totalSeats required 1–10000), handler (UUIDv7, uniqueness via unique index → 409), CreateClassRequest (nullable fields), ClassesController POST → 201 + Location; appsettings silences EF Command/Update error logs for expected constraint violations — clean build 0 warnings; `dotnet test`: UnitTests 92 passed (15 new validator cases), IntegrationTests 79 passed, 0 failed; Docker curl: 201 + Location with trimmed name, case-insensitive duplicate → 409 CLASS_NAME_EXISTS, `"120"` → 400 MALFORMED_JSON, 100 KB body → 413 PAYLOAD_TOO_LARGE, 0 fail/crit log lines — (this commit)
+- 2026-11-10 00:33 — 04.2 — ClassSeatSummaryDto (availableSeats = max(0, total − held − confirmed)), IClassReadStore + ClassReadStore (AsNoTracking, one SQL with correlated counts; held = HELD and expiresAt > now), GetClassesQuery, GetClassByIdQuery (RouteId → 404 CLASS_NOT_FOUND), ClassesController GET list/detail — clean build 0 warnings; `dotnet test`: UnitTests 96 passed (4 new availability cases), IntegrationTests 79 passed, 0 failed; Docker curl: list 200 oldest-first, detail 200, `abc`/zero-UUID → 404, with seeded holds (1 active, 1 expired, 1 confirmed) → held 1 / confirmed 1 / available 118 — (this commit)
+- 2026-11-10 00:29 — 04.1 — CreateClassCommand (+ CreatedClassDto), validator (name required/≤100 after trim, totalSeats required 1–10000), handler (UUIDv7, uniqueness via unique index → 409), CreateClassRequest (nullable fields), ClassesController POST → 201 + Location; appsettings silences EF Command/Update error logs for expected constraint violations — clean build 0 warnings; `dotnet test`: UnitTests 92 passed (15 new validator cases), IntegrationTests 79 passed, 0 failed; Docker curl: 201 + Location with trimmed name, case-insensitive duplicate → 409 CLASS_NAME_EXISTS, `"120"` → 400 MALFORMED_JSON, 100 KB body → 413 PAYLOAD_TOO_LARGE, 0 fail/crit log lines — 0717163
 - 2026-11-10 00:21 — 03 merge — full verification on 6e5c70e (fresh volume; `docker compose --profile test run --rm backend-tests`: 77 unit + 79 integration passed, exit 0, no MSB warnings; `docker compose up --build -d`: health 200, unknown route → 404 problem+json, 0 fail/crit log lines; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/03-app-plumbing, merged --no-ff into main, Git History row updated in the merge commit — 359e8ca
 - 2026-11-10 00:19 — 03.4 — IntegrationTests harness: ApiFixture (+ Customize hook; ProbeApiFixture), TestData (StudentId, unique ClassName), HttpAssertions (ReadJsonAsync, ProblemCodeAsync, AssertProblemAsync, AssertHasProperties), Db.AssertInvariantAsync (Database.md §10 queries evaluated at a given time), Concurrency collection; HarnessTests (7: ids valid/distinct, names unique, fixture migrated, invariant passes/detects overselling/uses given time, DB isolation + drop); ApiConventionsTests and RepositoryTests moved onto the shared fixture; sweep-batch test moved to SweepBatchTests (own DB) — clean rebuild 0 warnings; `dotnet test` ×3: UnitTests 77 passed, IntegrationTests 79 passed, 0 failed; no leftover test DBs — 6e5c70e
 - 2026-11-10 00:15 — 03.3 — Api: GlobalExceptionHandler (AppException/DomainException → 4xx with code + extensions, DB outage → 503, BadHttpRequestException → its status, else 500 without details), ProblemDetailsSetup (type httpstatuses.io, default codes, traceId, MALFORMED_JSON vs VALIDATION_FAILED for model binding), UtcDateTimeOffsetConverter, strict JSON number handling, CORS policy, Kestrel 64 KB limit, UseExceptionHandler/UseStatusCodePages/UseCors order; HealthResponse now uses DateTimeOffset + converter; EF Core pinned to 10.0.14 in Infrastructure (MSB3277 fix) — clean rebuild 0 warnings; `dotnet test`: UnitTests 77 passed, IntegrationTests 72 passed (28 new ApiConventionsTests via a test-only ProbeController), 0 failed; Docker curl: 404/405 problem+json, CORS preflight 204 with allowed headers/methods — 7cd9ee1
@@ -165,6 +166,7 @@ Phase 04 (Classes) in progress on `phase/04-classes`. Phases 00–03 are merged:
 - **ASSUMPTIONS.md scope.** Only product/spec interpretations go into both ASSUMPTIONS.md files; git/tooling decisions are logged here only, to keep the graded ASSUMPTIONS.md short and on-topic.
 
 ## AI Mistakes & Fixes
+- **[Read store]** The AI ordered `GET /classes` by a member of a constructor-projected record (`.Select(c => new Row(...)).OrderBy(r => r.CreatedAt)`), which EF Core cannot translate → 500 on every list call. Caught by: the curl smoke test against the Docker stack before committing 04.2 (the planned integration tests come in 04.3). Fix: order the entity query before projecting; re-verified list/detail and counts.
 - **[Backend tests]** When the AI moved RepositoryTests onto a shared per-class database (03.4), it missed that the sweep-batch test operates on all holds in the database, not only its own class. Caught by: the test failing (expected 1 expired, got 2). Fix: the sweep test moved to its own class with its own database.
 - **[API JSON]** The AI assumed ASP.NET Core rejects `"totalSeats":"120"` by default. The MVC web JSON defaults allow numbers in strings, which would break API.md §4.1 (`"120"` → 400). Caught by: the new `MalformedOrWronglyTypedJson_Is400MalformedJson` test (got 200). Fix: `JsonNumberHandling.Strict`.
 - **[Build]** An MSB3277 EF Core version conflict (10.0.4 vs 10.0.14) had been present since Phase 02. It went unnoticed because incremental builds and the AI's grep for `Warning(s)` hid it, and `TreatWarningsAsErrors` doesn't cover MSBuild warnings. Caught by: a `--no-incremental` rebuild in 03.3. Fix: pin `Microsoft.EntityFrameworkCore(.Relational)` 10.0.14 in Infrastructure; clean rebuild shows 0 warnings. Future verification uses clean builds.
