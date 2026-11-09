@@ -1,10 +1,10 @@
 # todo.md — Project Log
 
 ## Current Status
-Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer exists: `SchoolClass` (trimmed name + normalized name, seats 1–10000), `Hold` (Create, EffectiveStatus, idempotent Confirm/Cancel, Expire), `HoldStatus`, `ErrorCodes`, `DomainException`, `StudentIdentifier`. Builds with 0 warnings; existing test passes. Next: unit tests for the hold state transitions.
+Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer (`SchoolClass`, `Hold` with idempotent Confirm/Cancel and Expire, `HoldStatus`, `ErrorCodes`, `DomainException`, `StudentIdentifier`) is done and covered by unit tests: 44 unit test cases + 1 integration test pass. Next: EF Core `AdmissionDbContext` and entity configurations matching Database.md §2.
 
 ## In Progress
-- Phase 02 — Domain & persistence: 02.2 `test(domain): cover hold state transitions with unit tests`
+- Phase 02 — Domain & persistence: 02.3 `feat(infra): add EF Core context and entity configurations`
 
 ## Pending / Upcoming
 
@@ -20,7 +20,7 @@ Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer exists: 
 
 ### 02 — Domain & persistence (`phase/02-domain-persistence`)
 - [x] 02.1 feat(domain): add class and hold entities with state transitions
-- [ ] 02.2 test(domain): cover hold state transitions with unit tests
+- [x] 02.2 test(domain): cover hold state transitions with unit tests
 - [ ] 02.3 feat(infra): add EF Core context and entity configurations
 - [ ] 02.4 feat(infra): add initial migration and startup migrator
 
@@ -94,7 +94,7 @@ Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer exists: 
 |-------|--------|---------|-------|--------|----------------|
 | 00 — Repository bootstrap | phase/00-bootstrap | 3/3 (c925994, 61a6a72, a95d5a1) | n/a (docs only) | ✅ | ✅ |
 | 01 — Backend skeleton & Docker | phase/01-backend-skeleton | 3/3 (797a484, 836e02e, d597e04) | ✅ 1 passed (Docker) | ✅ | ✅ |
-| 02 — Domain & persistence | phase/02-domain-persistence | 1/4 | | | |
+| 02 — Domain & persistence | phase/02-domain-persistence | 2/4 (53a7d5a, 02.2) | | | |
 | 03 — Application plumbing | phase/03-app-plumbing | 0/4 | | | |
 | 04 — Classes | phase/04-classes | 0/3 | | | |
 | 05 — Holds & concurrency | phase/05-holds-concurrency | 0/3 | | | |
@@ -110,8 +110,9 @@ Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer exists: 
 
 ## Done Log
 (Times are the git commit times, `git log --date=format:"%Y-%m-%d %H:%M"`.)
-- 2026-11-09 23:44 — 02.1 — Domain: SchoolClass, Hold (state transitions per Implementation.md §R2 plus `Expire`), HoldStatus, ErrorCodes (all API.md §3 codes), DomainException, StudentIdentifier — build 0 warnings; `dotnet test`: 1 passed (existing health test; domain tests follow in 02.2) — (this commit)
-- 2026-11-09 23:37 — 01 merge — full verification on d597e04 (backend-tests in Docker: 1 passed; `docker compose up --build -d` + `curl /health` → 200; no bin/obj/PDF/.env tracked), pushed phase/01-backend-skeleton, merged --no-ff into main, Git History row updated in the merge commit — merge commit on main
+- 2026-11-09 23:45 — 02.2 — unit tests: HoldTests (Create, EffectiveStatus boundaries incl. exactly-at-expiry, Confirm/Cancel matrix with idempotency and error codes, Expire), SchoolClassTests (trim/normalize, name 1–100, seats 1–10000), StudentIdentifierTests (ASCII-only, Bengali/full-width rejected) — `dotnet test` in sdk:10.0 container: UnitTests 44 passed, IntegrationTests 1 passed, 0 failed — (this commit)
+- 2026-11-09 23:44 — 02.1 — Domain: SchoolClass, Hold (state transitions per Implementation.md §R2 plus `Expire`), HoldStatus, ErrorCodes (all API.md §3 codes), DomainException, StudentIdentifier — build 0 warnings; `dotnet test`: 1 passed (existing health test; domain tests follow in 02.2) — 53a7d5a
+- 2026-11-09 23:37 — 01 merge — full verification on d597e04 (backend-tests in Docker: 1 passed; `docker compose up --build -d` + `curl /health` → 200; no bin/obj/PDF/.env tracked), pushed phase/01-backend-skeleton, merged --no-ff into main, Git History row updated in the merge commit — 9945738
 - 2026-11-09 23:36 — 01.3 — backend/Dockerfile (restore-cached build, `test` stage, non-root `runtime` stage last), .dockerignore, docker-compose.yml (db PostgreSQL 17 + named volume `pgdata`, backend :8080, `backend-tests` profile), docker-compose.dev.yml (db on :5433) — `docker compose up --build -d`: db healthy, `curl /health` → 200 `{"status":"ok","serverTime":"…Z"}`, backend runs as uid 1654; `docker compose --profile test run --rm backend-tests`: 1 passed, exit 0 — d597e04
 - 2026-11-09 23:31 — 01.2 — Program.cs (TimeProvider singleton, controllers, `public partial class Program`), HealthController + HealthResponse, HealthEndpointTests with FakeTimeProvider — build 0 warnings; `dotnet test`: 1 passed, 0 failed — 836e02e
 - 2026-11-09 23:29 — 01.1 — solution `SchoolAdmission.sln` with 4 src + 2 test projects, references per dependency rule, pinned packages, Directory.Build.props (net10.0, nullable, TreatWarningsAsErrors), global.json — `dotnet build -c Release` in sdk:10.0 container: 0 warnings, 0 errors; `dotnet test`: 0 tests (none exist yet) — 797a484
