@@ -25,7 +25,11 @@ public sealed class ClassesController(ISender sender) : ControllerBase
         Ok(await sender.Send(new GetClassesQuery(), ct));
 
     /// <summary>GET /classes/{classId} → 200, or 404 CLASS_NOT_FOUND (also for malformed ids).</summary>
+    /// <remarks>
+    /// Route ids are nullable: MVC binds a whitespace segment (e.g. <c>%20</c>) as null, and a non-nullable
+    /// parameter would be implicitly required → 400. The handler decides instead → 404.
+    /// </remarks>
     [HttpGet("{classId}")]
-    public async Task<IActionResult> Get(string classId, CancellationToken ct) =>
-        Ok(await sender.Send(new GetClassByIdQuery(classId), ct));
+    public async Task<IActionResult> Get(string? classId, CancellationToken ct) =>
+        Ok(await sender.Send(new GetClassByIdQuery(classId ?? string.Empty), ct));
 }
