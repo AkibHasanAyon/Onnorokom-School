@@ -20,13 +20,19 @@ public class ApiFixture : IAsyncLifetime
     /// <summary>HOLD_DURATION_SECONDS for this host.</summary>
     protected virtual int HoldSeconds => 600;
 
+    /// <summary>HOLD_SWEEPER_ENABLED for this host (off by default: tests trigger sweeps explicitly).</summary>
+    protected virtual bool SweeperEnabled => false;
+
+    /// <summary>HOLD_SWEEP_INTERVAL_SECONDS for this host.</summary>
+    protected virtual int SweepIntervalSeconds => 5;
+
     /// <summary>Hook for fixtures that need extra test services (e.g. a probe controller).</summary>
     protected virtual WebApplicationFactory<Program> Customize(AdmissionApiFactory factory) => factory;
 
     public async Task InitializeAsync()
     {
         await Database.InitializeAsync();
-        Factory = new AdmissionApiFactory(Database.ConnectionString, HoldSeconds);
+        Factory = new AdmissionApiFactory(Database.ConnectionString, HoldSeconds, SweeperEnabled, SweepIntervalSeconds);
         Host = Customize(Factory);
         Client = Host.CreateClient(); // starts the host → runs migrations
     }
