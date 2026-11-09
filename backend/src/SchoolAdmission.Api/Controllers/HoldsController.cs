@@ -1,5 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using SchoolAdmission.Application.Holds.CancelHold;
+using SchoolAdmission.Application.Holds.ConfirmHold;
 using SchoolAdmission.Application.Holds.CreateHold;
 using SchoolAdmission.Application.Holds.GetHoldById;
 
@@ -27,4 +29,19 @@ public sealed class HoldsController(ISender sender) : ControllerBase
     [HttpGet("{holdId}")]
     public async Task<IActionResult> Get(string? holdId, CancellationToken ct) =>
         Ok(await sender.Send(new GetHoldByIdQuery(holdId ?? string.Empty), ct));
+
+    /// <summary>POST /holds/{holdId}/confirm → 200 (also when already confirmed); 403 not owner; 409 cancelled/expired.</summary>
+    [HttpPost("{holdId}/confirm")]
+    public async Task<IActionResult> Confirm(string? holdId,
+        [FromHeader(Name = StudentIdHeader)] string? studentId, CancellationToken ct) =>
+        Ok(await sender.Send(new ConfirmHoldCommand(holdId ?? string.Empty, studentId), ct));
+
+    /// <summary>DELETE /holds/{holdId} → 204 (also when already cancelled); 403 not owner; 409 confirmed/expired.</summary>
+    [HttpDelete("{holdId}")]
+    public async Task<IActionResult> Cancel(string? holdId,
+        [FromHeader(Name = StudentIdHeader)] string? studentId, CancellationToken ct)
+    {
+        await sender.Send(new CancelHoldCommand(holdId ?? string.Empty, studentId), ct);
+        return NoContent();
+    }
 }
