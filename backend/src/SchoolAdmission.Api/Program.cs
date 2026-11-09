@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using SchoolAdmission.Application;
 using SchoolAdmission.Infrastructure;
 using SchoolAdmission.Infrastructure.Persistence;
 
@@ -6,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // All application code reads time through TimeProvider; tests replace it with FakeTimeProvider.
 builder.Services.TryAddSingleton(TimeProvider.System);
+builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllers();
