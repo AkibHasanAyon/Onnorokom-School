@@ -1,10 +1,10 @@
 # todo.md — Project Log
 
 ## Current Status
-Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer (`SchoolClass`, `Hold` with idempotent Confirm/Cancel and Expire, `HoldStatus`, `ErrorCodes`, `DomainException`, `StudentIdentifier`) is done and covered by unit tests: 44 unit test cases + 1 integration test pass. Next: EF Core `AdmissionDbContext` and entity configurations matching Database.md §2.
+Phase 02 in progress on `phase/02-domain-persistence`. Domain layer done with unit tests. `AdmissionDbContext` + configurations map exactly to Database.md §2 (snake_case, check constraints, partial unique index `ux_holds_class_student_active`, 3 query indexes); a DDL-based model test verifies this without a DB. Tests: 44 unit + 27 integration passing. Next: `InitialCreate` migration, startup migrator with advisory lock, DB-backed health check.
 
 ## In Progress
-- Phase 02 — Domain & persistence: 02.3 `feat(infra): add EF Core context and entity configurations`
+- Phase 02 — Domain & persistence: 02.4 `feat(infra): add initial migration and startup migrator`
 
 ## Pending / Upcoming
 
@@ -21,7 +21,7 @@ Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer (`School
 ### 02 — Domain & persistence (`phase/02-domain-persistence`)
 - [x] 02.1 feat(domain): add class and hold entities with state transitions
 - [x] 02.2 test(domain): cover hold state transitions with unit tests
-- [ ] 02.3 feat(infra): add EF Core context and entity configurations
+- [x] 02.3 feat(infra): add EF Core context and entity configurations
 - [ ] 02.4 feat(infra): add initial migration and startup migrator
 
 ### 03 — Application plumbing (`phase/03-app-plumbing`)
@@ -94,7 +94,7 @@ Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer (`School
 |-------|--------|---------|-------|--------|----------------|
 | 00 — Repository bootstrap | phase/00-bootstrap | 3/3 (c925994, 61a6a72, a95d5a1) | n/a (docs only) | ✅ | ✅ |
 | 01 — Backend skeleton & Docker | phase/01-backend-skeleton | 3/3 (797a484, 836e02e, d597e04) | ✅ 1 passed (Docker) | ✅ | ✅ |
-| 02 — Domain & persistence | phase/02-domain-persistence | 2/4 (53a7d5a, 02.2) | | | |
+| 02 — Domain & persistence | phase/02-domain-persistence | 3/4 (53a7d5a, a23bc5b, 02.3) | | | |
 | 03 — Application plumbing | phase/03-app-plumbing | 0/4 | | | |
 | 04 — Classes | phase/04-classes | 0/3 | | | |
 | 05 — Holds & concurrency | phase/05-holds-concurrency | 0/3 | | | |
@@ -110,7 +110,8 @@ Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer (`School
 
 ## Done Log
 (Times are the git commit times, `git log --date=format:"%Y-%m-%d %H:%M"`.)
-- 2026-11-09 23:45 — 02.2 — unit tests: HoldTests (Create, EffectiveStatus boundaries incl. exactly-at-expiry, Confirm/Cancel matrix with idempotency and error codes, Expire), SchoolClassTests (trim/normalize, name 1–100, seats 1–10000), StudentIdentifierTests (ASCII-only, Bengali/full-width rejected) — `dotnet test` in sdk:10.0 container: UnitTests 44 passed, IntegrationTests 1 passed, 0 failed — (this commit)
+- 2026-11-09 23:47 — 02.3 — Infrastructure: AdmissionDbContext, SchoolClassConfiguration, HoldConfiguration, HoldStatusConverter (Held ↔ "HELD"), AddInfrastructure (Npgsql, no retry strategy), wired in Program — `dotnet test`: UnitTests 44 passed, IntegrationTests 27 passed (26 new ModelTests cases checking generated DDL vs Database.md §2), 0 failed — (this commit)
+- 2026-11-09 23:45 — 02.2 — unit tests: HoldTests (Create, EffectiveStatus boundaries incl. exactly-at-expiry, Confirm/Cancel matrix with idempotency and error codes, Expire), SchoolClassTests (trim/normalize, name 1–100, seats 1–10000), StudentIdentifierTests (ASCII-only, Bengali/full-width rejected) — `dotnet test` in sdk:10.0 container: UnitTests 44 passed, IntegrationTests 1 passed, 0 failed — a23bc5b
 - 2026-11-09 23:44 — 02.1 — Domain: SchoolClass, Hold (state transitions per Implementation.md §R2 plus `Expire`), HoldStatus, ErrorCodes (all API.md §3 codes), DomainException, StudentIdentifier — build 0 warnings; `dotnet test`: 1 passed (existing health test; domain tests follow in 02.2) — 53a7d5a
 - 2026-11-09 23:37 — 01 merge — full verification on d597e04 (backend-tests in Docker: 1 passed; `docker compose up --build -d` + `curl /health` → 200; no bin/obj/PDF/.env tracked), pushed phase/01-backend-skeleton, merged --no-ff into main, Git History row updated in the merge commit — 9945738
 - 2026-11-09 23:36 — 01.3 — backend/Dockerfile (restore-cached build, `test` stage, non-root `runtime` stage last), .dockerignore, docker-compose.yml (db PostgreSQL 17 + named volume `pgdata`, backend :8080, `backend-tests` profile), docker-compose.dev.yml (db on :5433) — `docker compose up --build -d`: db healthy, `curl /health` → 200 `{"status":"ok","serverTime":"…Z"}`, backend runs as uid 1654; `docker compose --profile test run --rm backend-tests`: 1 passed, exit 0 — d597e04
@@ -132,6 +133,8 @@ Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer (`School
 - **Exact package pins.** FluentValidation 11.12.0 (latest 11.x; 12.x exists but the spec pins 11.x), MediatR 12.5.0, Npgsql/Npgsql EF 10.0.3, Microsoft EF Design / Mvc.Testing / Options 10.0.14, TimeProvider.Testing 10.11.0, xunit 2.9.3 (as generated by the SDK template). `coverlet.collector` from the template was removed (no coverage requirement).
 - **`global.json`** pins SDK 10.0.x (`rollForward: latestFeature`) so the 10.0 SDK is used even when a newer SDK is also installed (Docker builds are unaffected).
 - **Health test added in Phase 01** (the plan starts tests in Phase 02/03). It needs no database and pins the timestamp format early. Its `serverTime` is formatted in the controller for now; Phase 03 moves timestamp formatting to the shared `UtcDateTimeOffsetConverter`.
+- **Explicit lowercase PK/FK names** (`pk_classes`, `pk_holds`, `fk_holds_classes_class_id`). Database.md §2 leaves them unnamed; lowercase keeps every DB object snake_case, matching the other names. Schema detail only, so not added to ASSUMPTIONS.md.
+- **Model verified by generating the DDL** (`GenerateCreateScript`) in `IntegrationTests/Persistence/ModelTests`, so schema drift from Database.md §2 is caught without a database.
 - **ASSUMPTIONS.md scope.** Only product/spec interpretations go into both ASSUMPTIONS.md files; git/tooling decisions are logged here only, to keep the graded ASSUMPTIONS.md short and on-topic.
 
 ## AI Mistakes & Fixes
