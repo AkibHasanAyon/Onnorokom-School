@@ -6,6 +6,10 @@
 
   <ItemGroup>
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <!-- Pin EF Core to the same patch as Microsoft.EntityFrameworkCore.Design (Api). Npgsql 10.0.3 alone
+         resolves EF Core 10.0.4, which conflicted with 10.0.14 in the test project (MSB3277). -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.14" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.14" />
   </ItemGroup>
 
 </Project>
