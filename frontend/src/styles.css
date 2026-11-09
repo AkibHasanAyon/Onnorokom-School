@@ -1,0 +1,174 @@
+/* Design tokens (docs/Design.md §6). Plain CSS, no UI kit. */
+:root {
+  --bg: #ffffff;
+  --fg: #1f2933;
+  --muted: #616e7c;
+  --border: #d9dee3;
+  --surface: #f8fafc;
+  --primary: #1d4ed8;
+  --primary-fg: #ffffff;
+  --held: #b45309;
+  --held-bg: #fef3c7;
+  --confirmed: #15803d;
+  --confirmed-bg: #dcfce7;
+  --inactive: #4b5563;
+  --inactive-bg: #e5e7eb;
+  --danger: #b91c1c;
+  --danger-bg: #fee2e2;
+  --radius: 8px;
+  --gap: 12px;
+  font-family: system-ui, 'Noto Sans Bengali', sans-serif;
+  line-height: 1.5;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #111827;
+    --fg: #f3f4f6;
+    --muted: #9ca3af;
+    --border: #374151;
+    --surface: #1f2937;
+    --primary: #60a5fa;
+    --primary-fg: #0b1220;
+    --held-bg: #451a03;
+    --held: #fcd34d;
+    --confirmed-bg: #052e16;
+    --confirmed: #86efac;
+    --inactive-bg: #374151;
+    --inactive: #e5e7eb;
+    --danger-bg: #450a0a;
+    --danger: #fca5a5;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+a {
+  color: var(--primary);
+}
+
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+/* ---- Header ---- */
+.app-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.app-header .container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding-top: var(--gap);
+  padding-bottom: var(--gap);
+}
+
+.app-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.app-title a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.app-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-nav a {
+  display: inline-block;
+  padding: 6px 0;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.app-nav a[aria-current='page'] {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+main.container {
+  padding-top: 24px;
+  padding-bottom: 48px;
+}
+
+/* ---- Controls ---- */
+button,
+.button {
+  min-height: 40px;
+  padding: 8px 16px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--primary-fg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+button.secondary,
+.button.secondary {
+  background: transparent;
+  color: var(--primary);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* ---- Alerts ---- */
+.alert {
+  padding: var(--gap);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.alert-error {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+  color: var(--fg);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  margin-top: var(--gap);
+}
+
+.muted {
+  color: var(--muted);
+}

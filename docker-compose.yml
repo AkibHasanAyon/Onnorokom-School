@@ -32,6 +32,17 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  frontend:
+    build: ./frontend
+    environment:
+      # The URL the *browser* uses to reach the backend (never http://backend:8080).
+      API_BASE_URL: ${API_BASE_URL:-http://localhost:8080}
+    ports:
+      - "5173:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
   backend-tests:
     profiles: ["test"]
     build:

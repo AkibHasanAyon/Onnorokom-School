@@ -1,0 +1,42 @@
+import { Link, NavLink, Outlet, useLocation } from 'react-router';
+import { messages } from '../i18n/messages';
+import { ErrorBoundary } from './ErrorBoundary';
+
+/** Header (title, navigation; the student ID bar joins it in Phase 10) + the current page. */
+export function Layout() {
+  const { pathname } = useLocation();
+  const t = messages.nav;
+
+  return (
+    <>
+      <header className="app-header">
+        <div className="container">
+          <p className="app-title">
+            <Link to="/">🏫 {messages.app.title}</Link>
+          </p>
+          <nav className="app-nav" aria-label={t.label}>
+            <ul>
+              <li>
+                <NavLink to="/" end>
+                  {t.classes}
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/my-applications">{t.myApplications}</NavLink>
+              </li>
+              <li>
+                <NavLink to="/admin/classes/new">{t.createClass}</NavLink>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </header>
+      <main className="container">
+        {/* Keyed by path: a crash on one page doesn't stick after navigating elsewhere. */}
+        <ErrorBoundary key={pathname}>
+          <Outlet />
+        </ErrorBoundary>
+      </main>
+    </>
+  );
+}
