@@ -2,7 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolAdmission.Application.Abstractions.Persistence;
+using SchoolAdmission.Application.Abstractions.ReadModels;
 using SchoolAdmission.Infrastructure.Persistence;
+using SchoolAdmission.Infrastructure.ReadStores;
 using SchoolAdmission.Infrastructure.Repositories;
 
 namespace SchoolAdmission.Infrastructure;
@@ -20,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IClassRepository, ClassRepository>();
         services.AddScoped<IHoldRepository, HoldRepository>();
+        services.AddScoped<IClassReadStore, ClassReadStore>();
         services.AddScoped<IDatabaseHealthCheck, DatabaseHealthCheck>();
 
         return services;
