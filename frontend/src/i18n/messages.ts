@@ -49,6 +49,21 @@ export const messages = {
     admitted: 'Admitted ✓',
     retry: 'Retry',
   },
+  createClass: {
+    intro: 'Each shift is its own class, e.g. "Class 6 - Morning Shift".',
+    nameLabel: 'Class name',
+    namePlaceholder: 'Class 6 - Morning Shift',
+    seatsLabel: 'Total seats',
+    submit: 'Create class',
+    submitting: 'Creating…',
+    created: (name: string, seats: number) => `✓ "${name}" created with ${seats} seats.`,
+    viewClasses: 'View classes',
+    nameRequired: 'Name is required.',
+    nameTooLong: (max: number) => `Name must be at most ${max} characters.`,
+    seatsRequired: 'Total seats is required.',
+    seatsWhole: 'Total seats must be a whole number.',
+    seatsRange: (min: number, max: number) => `Total seats must be between ${min} and ${max}.`,
+  },
   errors: {
     NO_SEATS_AVAILABLE:
       "Sorry, all seats in this class are taken right now. Seats may open up if other applicants don't pay in time.",

@@ -261,6 +261,49 @@ td.num {
   color: var(--fg);
 }
 
+.alert-success {
+  border-color: var(--confirmed);
+  background: var(--confirmed-bg);
+  color: var(--fg);
+}
+
+.alert p {
+  margin: 0 0 4px;
+}
+
+/* ---- Forms ---- */
+.form {
+  display: grid;
+  gap: 16px;
+  max-width: 28rem;
+  margin-top: 16px;
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.field input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.form button[type='submit'] {
+  justify-self: start;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

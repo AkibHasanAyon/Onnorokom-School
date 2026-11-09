@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { listClasses } from '../api/classes';
+import { createClass, listClasses } from '../api/classes';
 import { createHold, listMyHolds } from '../api/holds';
 
 /** Query keys (Integration.md §8). */
@@ -30,6 +30,15 @@ export function useMyHolds(studentId: string | null) {
     enabled: studentId !== null,
     refetchInterval: MY_HOLDS_POLL_MS,
     placeholderData: keepPreviousData,
+  });
+}
+
+/** Admin: create a class; the class list refreshes immediately on success. */
+export function useCreateClass() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createClass,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.classes }),
   });
 }
 
