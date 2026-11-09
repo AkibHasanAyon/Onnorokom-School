@@ -7,7 +7,7 @@ using SchoolAdmission.Application.Common.Validation;
 namespace SchoolAdmission.Application.Holds.GetMyHolds;
 
 /// <summary>GET /me/holds — all of this student's applications, newest first, every status (effective).</summary>
-public sealed record GetMyHoldsQuery(string? StudentId) : IQuery<IReadOnlyList<MyHoldDto>>;
+public sealed record GetMyHoldsQuery(string? StudentId) : IQuery<IReadOnlyList<MyHoldDto>>, IStudentRequest;
 
 public sealed class GetMyHoldsQueryValidator : AbstractValidator<GetMyHoldsQuery>
 {

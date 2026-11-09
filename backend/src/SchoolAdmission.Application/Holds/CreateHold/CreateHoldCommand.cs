@@ -8,7 +8,7 @@ namespace SchoolAdmission.Application.Holds.CreateHold;
 /// POST /classes/{classId}/holds — apply for a seat. <see cref="ClassId"/> is the raw route value
 /// (parsed in the handler so a bad header is 400 before an unknown class is 404).
 /// </summary>
-public sealed record CreateHoldCommand(string ClassId, string? StudentId) : ICommand<HoldCreatedDto>;
+public sealed record CreateHoldCommand(string ClassId, string? StudentId) : ICommand<HoldCreatedDto>, IStudentRequest;
 
 public sealed class CreateHoldCommandValidator : AbstractValidator<CreateHoldCommand>
 {
