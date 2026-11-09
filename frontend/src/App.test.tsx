@@ -2,6 +2,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router';
+import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { AppRoutes } from './AppRoutes';
@@ -9,6 +10,7 @@ import { getServerOffsetMs, resetServerOffset } from './api/serverClock';
 import { Layout } from './components/Layout';
 import { createQueryClient } from './queryClient';
 import { StudentProvider } from './student/StudentContext';
+import { server } from './test/server';
 
 function renderAt(path: string) {
   return render(
@@ -93,26 +95,28 @@ describe('ErrorBoundary', () => {
 
 describe('App start-up', () => {
   beforeEach(() => resetServerOffset());
-  afterEach(() => vi.unstubAllGlobals());
-
   it('seeds the server clock offset from GET /health once', async () => {
     const serverTime = new Date(Date.now() + 60_000).toISOString().replace(/\.\d{3}Z$/, 'Z');
-    const fetchMock = vi.fn<typeof fetch>(async () => Response.json({ status: 'ok', serverTime }));
-    vi.stubGlobal('fetch', fetchMock);
+    let healthCalls = 0;
+    server.use(http.get('*/health', () => {
+      healthCalls++;
+      return HttpResponse.json({ status: 'ok', serverTime });
+    }));
 
     render(<App />);
 
     await waitFor(() => expect(getServerOffsetMs()).toBeGreaterThan(58_000));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/\/health$/);
+    expect(healthCalls).toBe(1);
   });
 
-  it('still renders when the server is unreachable at start-up', async () => {
-    vi.stubGlobal('fetch', vi.fn<typeof fetch>(async () => { throw new TypeError('Failed to fetch'); }));
+  it('still renders, with a friendly message, when the server is unreachable at start-up', async () => {
+    server.use(http.all('*', () => HttpResponse.error()));
 
     render(<App />);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Classes' })).toBeInTheDocument();
+    // The production query client retries once (~1 s back-off) before reporting the error.
+    expect(await screen.findByRole('alert', {}, { timeout: 4_000 })).toHaveTextContent(/Can't reach the server/);
   });
 });
 

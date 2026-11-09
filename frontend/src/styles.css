@@ -196,6 +196,58 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* ---- Tables ---- */
+.table-scroll {
+  overflow-x: auto; /* the page stays 360 px wide; only the table scrolls */
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+thead th {
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+tbody tr:last-child th,
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+th.num,
+td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.notice {
+  padding: 8px 12px;
+  border-left: 4px solid var(--held);
+  background: var(--held-bg);
+  border-radius: 4px;
+}
+
 /* ---- Alerts ---- */
 .alert {
   padding: var(--gap);

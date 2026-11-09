@@ -1,6 +1,8 @@
+import { ApiError } from '../api/client';
+
 /**
- * Every user-facing string lives here (UI text is English; centralised for easy translation).
- * Error-code → message mappings are added with the screens that need them (Design.md §5).
+ * Every user-facing string lives here (UI text is English; centralised for easy translation),
+ * including the error-code → message mapping (Design.md §5).
  */
 export const messages = {
   app: {
@@ -29,6 +31,50 @@ export const messages = {
     application: 'Application',
     myApplications: 'My applications',
   },
+  classList: {
+    caption: 'Classes and seats',
+    loading: 'Loading classes…',
+    empty: 'No classes yet. An admin can create one from',
+    emptyLink: 'Admin: Create Class',
+    columns: { name: 'Class', total: 'Total', held: 'Held', confirmed: 'Confirmed', available: 'Available', action: 'Action' },
+    updatedJustNow: 'Updated just now',
+    updatedAgo: (seconds: number) => `Updated ${seconds} s ago`,
+    autoRefresh: 'Seat numbers refresh automatically every 3 seconds.',
+    needStudentId: 'Enter a birth registration number at the top of the page to apply.',
+    apply: 'Apply',
+    applyFor: (className: string) => `Apply for ${className}`,
+    applying: 'Applying…',
+    full: 'Full',
+    viewApplication: 'View application',
+    admitted: 'Admitted ✓',
+    retry: 'Retry',
+  },
+  errors: {
+    NO_SEATS_AVAILABLE:
+      "Sorry, all seats in this class are taken right now. Seats may open up if other applicants don't pay in time.",
+    ACTIVE_HOLD_EXISTS: 'You already have an active application for this class.',
+    ALREADY_ADMITTED: 'This student is already admitted to this class.',
+    HOLD_EXPIRED:
+      "This application has expired, so it can't be paid or cancelled. You can apply again if seats are available.",
+    HOLD_CANCELLED: "This application was cancelled and can't be paid.",
+    HOLD_ALREADY_CONFIRMED: "This admission is already confirmed and can't be cancelled here.",
+    HOLD_NOT_OWNED:
+      'This application belongs to a different birth registration number. Check the number at the top of the page.',
+    INVALID_STUDENT_ID: 'Please enter a valid 17-digit birth registration number at the top of the page.',
+    CLASS_NAME_EXISTS: 'A class with this name already exists. Use a different name (e.g., add the shift).',
+    VALIDATION_FAILED: 'Some information is missing or invalid. Please check the form.',
+    MALFORMED_JSON: 'Something was wrong with the information sent. Please try again.',
+    CLASS_NOT_FOUND: 'This class no longer exists.',
+    HOLD_NOT_FOUND: "We couldn't find this application. It may have been entered incorrectly.",
+    NOT_FOUND: "We couldn't find this application. It may have been entered incorrectly.",
+    SERVICE_UNAVAILABLE: 'The server is having trouble right now. Please try again in a moment.',
+    server: 'The server is having trouble right now. Please try again in a moment.',
+    network: "Can't reach the server. Check your internet connection — we'll keep retrying.",
+    timeout: 'The server is taking too long to respond. Please try again.',
+    unknown: 'Something went wrong. Please try again.',
+    openIt: 'Open it',
+    view: 'View',
+  },
   notFound: {
     title: 'Page not found',
     body: "This page doesn't exist. It may have been moved or the link may be wrong.",
@@ -41,3 +87,21 @@ export const messages = {
     home: 'Go to classes',
   },
 } as const;
+
+type ErrorCode = keyof typeof messages.errors;
+
+/**
+ * Any thrown value → a sentence a parent understands (R12). Never shows raw codes or stack traces;
+ * unexpected errors are also logged for developers.
+ */
+export function errorMessage(error: unknown): string {
+  const t = messages.errors;
+  if (error instanceof ApiError) {
+    if (error.kind === 'network') return t.network;
+    if (error.kind === 'timeout') return t.timeout;
+    if (error.code in t) return t[error.code as ErrorCode];
+    if (error.status !== null && error.status >= 500) return t.server;
+  }
+  console.error('Unexpected error', error);
+  return t.unknown;
+}
