@@ -1,8 +1,9 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { messages } from '../i18n/messages';
+import { StudentIdBar } from '../student/StudentIdBar';
 import { ErrorBoundary } from './ErrorBoundary';
 
-/** Header (title, navigation; the student ID bar joins it in Phase 10) + the current page. */
+/** Header (title, student ID bar, navigation) + the current page. */
 export function Layout() {
   const { pathname } = useLocation();
   const t = messages.nav;
@@ -14,6 +15,7 @@ export function Layout() {
           <p className="app-title">
             <Link to="/">🏫 {messages.app.title}</Link>
           </p>
+          <StudentIdBar />
           <nav className="app-nav" aria-label={t.label}>
             <ul>
               <li>

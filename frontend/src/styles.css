@@ -120,6 +120,53 @@ main.container {
   padding-bottom: 48px;
 }
 
+/* ---- Student ID bar ---- */
+.student-bar label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.student-bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px var(--gap);
+}
+
+.student-bar input {
+  min-height: 40px;
+  width: min(100%, 22rem);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+.student-bar input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.student-bar-saved {
+  color: var(--confirmed);
+  font-weight: 600;
+}
+
+.student-bar-hint,
+.field-error {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+}
+
+.field-error {
+  color: var(--danger);
+  font-weight: 500;
+}
+
 /* ---- Controls ---- */
 button,
 .button {
@@ -149,6 +196,58 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* ---- Tables ---- */
+.table-scroll {
+  overflow-x: auto; /* the page stays 360 px wide; only the table scrolls */
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+thead th {
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+tbody tr:last-child th,
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+th.num,
+td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.notice {
+  padding: 8px 12px;
+  border-left: 4px solid var(--held);
+  background: var(--held-bg);
+  border-radius: 4px;
+}
+
 /* ---- Alerts ---- */
 .alert {
   padding: var(--gap);
@@ -160,6 +259,49 @@ button:disabled {
   border-color: var(--danger);
   background: var(--danger-bg);
   color: var(--fg);
+}
+
+.alert-success {
+  border-color: var(--confirmed);
+  background: var(--confirmed-bg);
+  color: var(--fg);
+}
+
+.alert p {
+  margin: 0 0 4px;
+}
+
+/* ---- Forms ---- */
+.form {
+  display: grid;
+  gap: 16px;
+  max-width: 28rem;
+  margin-top: 16px;
+}
+
+.field label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.field input {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+}
+
+.field input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.form button[type='submit'] {
+  justify-self: start;
 }
 
 .actions {
