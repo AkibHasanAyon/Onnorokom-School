@@ -10,6 +10,11 @@
          resolves EF Core 10.0.4, which conflicted with 10.0.14 in the test project (MSB3277). -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.14" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.14" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="SchoolAdmission.IntegrationTests" />
   </ItemGroup>
 
 </Project>
