@@ -1,10 +1,10 @@
 # todo.md — Project Log
 
 ## Current Status
-Phase 03 (Application plumbing) is complete. Phases 00–02 are merged (domain, EF model, migration, startup migrator, DB health check). Application plumbing so far: `ICommand`/`IQuery`, MediatR pipeline (Logging → Validation → Transaction for commands only), app exceptions (NotFound/Forbidden/Conflict/RequestValidation/ServiceUnavailable), `HoldOptions` bound from `HOLD_*` env vars with fail-fast validation, `TruncateToSeconds`, `RouteId`, the shared X-Student-Id rule. EF `UnitOfWork` (READ COMMITTED; unique violations → 409 `CLASS_NAME_EXISTS`/`ACTIVE_HOLD_EXISTS`, check violations → 400) and the class/hold repositories (`FOR UPDATE` row locks, derived seat counts, stale-hold expiry, `SKIP LOCKED` sweep batch) are in place. Every error is now RFC 9457 problem+json with `code` + `traceId` (exceptions → 400/403/404/409/503, bugs → generic 500; malformed/wrongly-typed JSON → 400 `MALFORMED_JSON`; unknown route 404, wrong method 405, non-JSON 415, oversize 413); timestamps serialize as UTC whole seconds with `Z`; strict JSON numbers; CORS for the SPA origins; 64 KB body limit. The integration-test harness is complete: `ApiFixture` (one DB + host per test class), `TestData`, `HttpAssertions` (problem+json shape, exact property names), `Db.AssertInvariantAsync` (R1 + R3 at a given clock time; self-tested to detect overselling), the `Concurrency` xUnit collection. Tests: 77 unit + 79 integration passing (3 consecutive green runs). Phase 03 is pushed and merged into `main`. Next: Phase 04, classes (create/list/get with seat accounting).
+Phase 04 (Classes) in progress on `phase/04-classes`. Phases 00–03 are merged: domain + EF model + migrations, MediatR pipeline (validation → 400, READ COMMITTED transactions), repositories with `FOR UPDATE` row locks, problem+json errors with stable codes, CORS, 64 KB limit, and a real-PostgreSQL integration-test harness. `POST /classes` now works: 201 + `Location`, trimmed name, 400 `VALIDATION_FAILED`/`MALFORMED_JSON`, 409 `CLASS_NAME_EXISTS` (case-insensitive), 413 over 64 KB (verified against real Kestrel). Tests: 92 unit + 79 integration passing. Next: `GET /classes` and `GET /classes/{id}` with derived seat counts.
 
 ## In Progress
-- Phase 04 — Classes: not started (waiting for "continue")
+- Phase 04 — Classes: 04.2 `feat(classes): add class list and detail queries with seat accounting`
 
 ## Pending / Upcoming
 
@@ -31,7 +31,7 @@ Phase 03 (Application plumbing) is complete. Phases 00–02 are merged (domain, 
 - [x] 03.4 test: add integration test harness with real PostgreSQL
 
 ### 04 — Classes (`phase/04-classes`)
-- [ ] 04.1 feat(classes): add create-class command with validation
+- [x] 04.1 feat(classes): add create-class command with validation
 - [ ] 04.2 feat(classes): add class list and detail queries with seat accounting
 - [ ] 04.3 test(classes): add contract and validation tests for class endpoints
 
@@ -96,7 +96,7 @@ Phase 03 (Application plumbing) is complete. Phases 00–02 are merged (domain, 
 | 01 — Backend skeleton & Docker | phase/01-backend-skeleton | 3/3 (797a484, 836e02e, d597e04) | ✅ 1 passed (Docker) | ✅ | ✅ |
 | 02 — Domain & persistence | phase/02-domain-persistence | 4/4 (53a7d5a, a23bc5b, 16442dd, c07ff0a) | ✅ 44 unit + 33 integration (Docker, real PostgreSQL) | ✅ | ✅ |
 | 03 — Application plumbing | phase/03-app-plumbing | 4/4 (bd437fd, f60470f, 7cd9ee1, 6e5c70e) | ✅ 77 unit + 79 integration (Docker, real PostgreSQL) | ✅ | ✅ |
-| 04 — Classes | phase/04-classes | 0/3 | | | |
+| 04 — Classes | phase/04-classes | 1/3 | | | |
 | 05 — Holds & concurrency | phase/05-holds-concurrency | 0/3 | | | |
 | 06 — Hold lifecycle | phase/06-hold-lifecycle | 0/3 | | | |
 | 07 — Automatic expiry | phase/07-expiry | 0/2 | | | |
@@ -110,7 +110,8 @@ Phase 03 (Application plumbing) is complete. Phases 00–02 are merged (domain, 
 
 ## Done Log
 (Times are the git commit times, `git log --date=format:"%Y-%m-%d %H:%M"`.)
-- 2026-11-10 00:21 — 03 merge — full verification on 6e5c70e (fresh volume; `docker compose --profile test run --rm backend-tests`: 77 unit + 79 integration passed, exit 0, no MSB warnings; `docker compose up --build -d`: health 200, unknown route → 404 problem+json, 0 fail/crit log lines; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/03-app-plumbing, merged --no-ff into main, Git History row updated in the merge commit — merge commit (hash in next phase)
+- 2026-11-10 00:29 — 04.1 — CreateClassCommand (+ CreatedClassDto), validator (name required/≤100 after trim, totalSeats required 1–10000), handler (UUIDv7, uniqueness via unique index → 409), CreateClassRequest (nullable fields), ClassesController POST → 201 + Location; appsettings silences EF Command/Update error logs for expected constraint violations — clean build 0 warnings; `dotnet test`: UnitTests 92 passed (15 new validator cases), IntegrationTests 79 passed, 0 failed; Docker curl: 201 + Location with trimmed name, case-insensitive duplicate → 409 CLASS_NAME_EXISTS, `"120"` → 400 MALFORMED_JSON, 100 KB body → 413 PAYLOAD_TOO_LARGE, 0 fail/crit log lines — (this commit)
+- 2026-11-10 00:21 — 03 merge — full verification on 6e5c70e (fresh volume; `docker compose --profile test run --rm backend-tests`: 77 unit + 79 integration passed, exit 0, no MSB warnings; `docker compose up --build -d`: health 200, unknown route → 404 problem+json, 0 fail/crit log lines; no leftover test DBs; no bin/obj/PDF/.env tracked), pushed phase/03-app-plumbing, merged --no-ff into main, Git History row updated in the merge commit — 359e8ca
 - 2026-11-10 00:19 — 03.4 — IntegrationTests harness: ApiFixture (+ Customize hook; ProbeApiFixture), TestData (StudentId, unique ClassName), HttpAssertions (ReadJsonAsync, ProblemCodeAsync, AssertProblemAsync, AssertHasProperties), Db.AssertInvariantAsync (Database.md §10 queries evaluated at a given time), Concurrency collection; HarnessTests (7: ids valid/distinct, names unique, fixture migrated, invariant passes/detects overselling/uses given time, DB isolation + drop); ApiConventionsTests and RepositoryTests moved onto the shared fixture; sweep-batch test moved to SweepBatchTests (own DB) — clean rebuild 0 warnings; `dotnet test` ×3: UnitTests 77 passed, IntegrationTests 79 passed, 0 failed; no leftover test DBs — 6e5c70e
 - 2026-11-10 00:15 — 03.3 — Api: GlobalExceptionHandler (AppException/DomainException → 4xx with code + extensions, DB outage → 503, BadHttpRequestException → its status, else 500 without details), ProblemDetailsSetup (type httpstatuses.io, default codes, traceId, MALFORMED_JSON vs VALIDATION_FAILED for model binding), UtcDateTimeOffsetConverter, strict JSON number handling, CORS policy, Kestrel 64 KB limit, UseExceptionHandler/UseStatusCodePages/UseCors order; HealthResponse now uses DateTimeOffset + converter; EF Core pinned to 10.0.14 in Infrastructure (MSB3277 fix) — clean rebuild 0 warnings; `dotnet test`: UnitTests 77 passed, IntegrationTests 72 passed (28 new ApiConventionsTests via a test-only ProbeController), 0 failed; Docker curl: 404/405 problem+json, CORS preflight 204 with allowed headers/methods — 7cd9ee1
 - 2026-11-10 00:08 — 03.2 — Application `IClassRepository`/`IHoldRepository` (+ `SeatCounts`); Infrastructure `UnitOfWork` (READ COMMITTED tx, 23505 → ConflictException by constraint name, 23514 → 400), `ClassRepository`/`HoldRepository` per Database.md §5 (FromSql FOR UPDATE without LINQ composition, ExecuteUpdate stale-hold expiry, SKIP LOCKED batch), DI registrations — `dotnet test` (PostgreSQL 17): UnitTests 77 passed, IntegrationTests 44 passed (11 new RepositoryTests: 409 translation ×2, rollback/commit, class + hold row locks verified from a second connection with lock_timeout, seat counts incl. exactly-at-expiry, find active/confirmed, stale-hold expiry scope, sweep batches), 0 failed — f60470f
@@ -158,6 +159,9 @@ Phase 03 (Application plumbing) is complete. Phases 00–02 are merged (domain, 
 - **HTTP client helpers per endpoint (`CreateClassIdAsync`, `HoldAsync`, `ConfirmAsync`, ...) arrive with their endpoints** (Phases 04–06), so every helper is exercised by real tests when it is added.
 - **`Db.AssertInvariantAsync` takes the time to evaluate at** (default: real now). Tests run the API on a `FakeTimeProvider`, so using PostgreSQL's `now()` as in Database.md §10 would judge expiry at the wrong instant.
 - **Global sweep tests get their own database.** With a shared per-class database, a global `ExpireStaleBatchAsync` also touches other tests' rows.
+- **Class `created_at` keeps full precision** (not exposed in the API; holds still use whole seconds). `GET /classes` orders by creation time then id, and second-truncated times would order classes created in the same second arbitrarily.
+- **EF Core `Database.Command` and `Update` log categories set to `None`.** Expected unique violations (translated to 409) were logged twice at error level, which would flood logs during duplicate-application bursts. Real failures are still logged with the full exception by `GlobalExceptionHandler`; SQL logging can be re-enabled with `Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command=Information` (Debugging.md §5).
+- **Create-class validation messages**: "Name is required.", "Name must be at most 100 characters.", "Total seats is required.", "Total seats must be between 1 and 10000." (the last matches the API.md §3 example).
 - **ASSUMPTIONS.md scope.** Only product/spec interpretations go into both ASSUMPTIONS.md files; git/tooling decisions are logged here only, to keep the graded ASSUMPTIONS.md short and on-topic.
 
 ## AI Mistakes & Fixes
