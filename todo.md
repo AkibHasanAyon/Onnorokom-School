@@ -1,10 +1,10 @@
 # todo.md — Project Log
 
 ## Current Status
-Phase 01 (Backend skeleton & Docker) is pushed and merged into `main`. `docker compose up --build` starts PostgreSQL 17 (named volume) and the .NET 10 backend on :8080; `GET /health` returns `{status:"ok", serverTime}` (UTC, whole seconds, `Z`). `docker compose --profile test run --rm backend-tests` passes (1 test). No DB access yet. Next: Phase 02, Domain & persistence (entities, EF Core model, initial migration, startup migrator, DB-backed health check).
+Phase 02 in progress on `phase/02-domain-persistence`. The Domain layer exists: `SchoolClass` (trimmed name + normalized name, seats 1–10000), `Hold` (Create, EffectiveStatus, idempotent Confirm/Cancel, Expire), `HoldStatus`, `ErrorCodes`, `DomainException`, `StudentIdentifier`. Builds with 0 warnings; existing test passes. Next: unit tests for the hold state transitions.
 
 ## In Progress
-- Phase 02 — Domain & persistence: not started (waiting for "continue")
+- Phase 02 — Domain & persistence: 02.2 `test(domain): cover hold state transitions with unit tests`
 
 ## Pending / Upcoming
 
@@ -19,7 +19,7 @@ Phase 01 (Backend skeleton & Docker) is pushed and merged into `main`. `docker c
 - [x] 01.3 build(docker): add backend Dockerfile and compose with PostgreSQL
 
 ### 02 — Domain & persistence (`phase/02-domain-persistence`)
-- [ ] 02.1 feat(domain): add class and hold entities with state transitions
+- [x] 02.1 feat(domain): add class and hold entities with state transitions
 - [ ] 02.2 test(domain): cover hold state transitions with unit tests
 - [ ] 02.3 feat(infra): add EF Core context and entity configurations
 - [ ] 02.4 feat(infra): add initial migration and startup migrator
@@ -94,7 +94,7 @@ Phase 01 (Backend skeleton & Docker) is pushed and merged into `main`. `docker c
 |-------|--------|---------|-------|--------|----------------|
 | 00 — Repository bootstrap | phase/00-bootstrap | 3/3 (c925994, 61a6a72, a95d5a1) | n/a (docs only) | ✅ | ✅ |
 | 01 — Backend skeleton & Docker | phase/01-backend-skeleton | 3/3 (797a484, 836e02e, d597e04) | ✅ 1 passed (Docker) | ✅ | ✅ |
-| 02 — Domain & persistence | phase/02-domain-persistence | 0/4 | | | |
+| 02 — Domain & persistence | phase/02-domain-persistence | 1/4 | | | |
 | 03 — Application plumbing | phase/03-app-plumbing | 0/4 | | | |
 | 04 — Classes | phase/04-classes | 0/3 | | | |
 | 05 — Holds & concurrency | phase/05-holds-concurrency | 0/3 | | | |
@@ -110,6 +110,7 @@ Phase 01 (Backend skeleton & Docker) is pushed and merged into `main`. `docker c
 
 ## Done Log
 (Times are the git commit times, `git log --date=format:"%Y-%m-%d %H:%M"`.)
+- 2026-11-09 23:44 — 02.1 — Domain: SchoolClass, Hold (state transitions per Implementation.md §R2 plus `Expire`), HoldStatus, ErrorCodes (all API.md §3 codes), DomainException, StudentIdentifier — build 0 warnings; `dotnet test`: 1 passed (existing health test; domain tests follow in 02.2) — (this commit)
 - 2026-11-09 23:37 — 01 merge — full verification on d597e04 (backend-tests in Docker: 1 passed; `docker compose up --build -d` + `curl /health` → 200; no bin/obj/PDF/.env tracked), pushed phase/01-backend-skeleton, merged --no-ff into main, Git History row updated in the merge commit — merge commit on main
 - 2026-11-09 23:36 — 01.3 — backend/Dockerfile (restore-cached build, `test` stage, non-root `runtime` stage last), .dockerignore, docker-compose.yml (db PostgreSQL 17 + named volume `pgdata`, backend :8080, `backend-tests` profile), docker-compose.dev.yml (db on :5433) — `docker compose up --build -d`: db healthy, `curl /health` → 200 `{"status":"ok","serverTime":"…Z"}`, backend runs as uid 1654; `docker compose --profile test run --rm backend-tests`: 1 passed, exit 0 — d597e04
 - 2026-11-09 23:31 — 01.2 — Program.cs (TimeProvider singleton, controllers, `public partial class Program`), HealthController + HealthResponse, HealthEndpointTests with FakeTimeProvider — build 0 warnings; `dotnet test`: 1 passed, 0 failed — 836e02e
