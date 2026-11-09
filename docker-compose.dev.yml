@@ -1,0 +1,6 @@
+# Local development: exposes PostgreSQL on localhost:5433 for a locally run backend and tests.
+# docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db
+services:
+  db:
+    ports:
+      - "5433:5432"

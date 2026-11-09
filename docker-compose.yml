@@ -1,0 +1,47 @@
+name: school-admission
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: admission
+      POSTGRES_USER: admission
+      POSTGRES_PASSWORD: admission # dev-only credentials, not a secret
+    command: ["postgres", "-c", "max_connections=300"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admission -d admission"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=admission;Username=admission;Password=admission;Maximum Pool Size=100;Timeout=15;Command Timeout=30"
+      HOLD_DURATION_SECONDS: ${HOLD_DURATION_SECONDS:-600}
+      HOLD_SWEEP_INTERVAL_SECONDS: ${HOLD_SWEEP_INTERVAL_SECONDS:-5}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  backend-tests:
+    profiles: ["test"]
+    build:
+      context: ./backend
+      target: test
+    environment:
+      TEST_DB_CONNECTION: "Host=db;Port=5432;Database=postgres;Username=admission;Password=admission;Maximum Pool Size=100"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
