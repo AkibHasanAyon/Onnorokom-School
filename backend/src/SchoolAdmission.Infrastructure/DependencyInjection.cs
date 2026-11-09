@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using SchoolAdmission.Application.Abstractions.Persistence;
 using SchoolAdmission.Application.Abstractions.ReadModels;
+using SchoolAdmission.Infrastructure.BackgroundJobs;
 using SchoolAdmission.Infrastructure.Persistence;
 using SchoolAdmission.Infrastructure.ReadStores;
 using SchoolAdmission.Infrastructure.Repositories;
@@ -25,6 +26,9 @@ public static class DependencyInjection
         services.AddScoped<IClassReadStore, ClassReadStore>();
         services.AddScoped<IHoldReadStore, HoldReadStore>();
         services.AddScoped<IDatabaseHealthCheck, DatabaseHealthCheck>();
+
+        // Physical expiry (housekeeping). Logical expiry happens in every query at expiresAt.
+        services.AddHostedService<HoldExpirySweeper>();
 
         return services;
     }
