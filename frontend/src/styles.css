@@ -120,6 +120,53 @@ main.container {
   padding-bottom: 48px;
 }
 
+/* ---- Student ID bar ---- */
+.student-bar label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.student-bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px var(--gap);
+}
+
+.student-bar input {
+  min-height: 40px;
+  width: min(100%, 22rem);
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.05em;
+}
+
+.student-bar input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.student-bar-saved {
+  color: var(--confirmed);
+  font-weight: 600;
+}
+
+.student-bar-hint,
+.field-error {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+}
+
+.field-error {
+  color: var(--danger);
+  font-weight: 500;
+}
+
 /* ---- Controls ---- */
 button,
 .button {

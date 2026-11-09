@@ -8,13 +8,16 @@ import { AppRoutes } from './AppRoutes';
 import { getServerOffsetMs, resetServerOffset } from './api/serverClock';
 import { Layout } from './components/Layout';
 import { createQueryClient } from './queryClient';
+import { StudentProvider } from './student/StudentContext';
 
 function renderAt(path: string) {
   return render(
     <QueryClientProvider client={createQueryClient()}>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-      </MemoryRouter>
+      <StudentProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </StudentProvider>
     </QueryClientProvider>,
   );
 }
@@ -66,14 +69,16 @@ describe('ErrorBoundary', () => {
 
   it('replaces a crashed page with a friendly message instead of a blank screen', async () => {
     render(
-      <MemoryRouter initialEntries={['/boom']}>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="boom" element={<Boom />} />
-            <Route index element={<h1>Classes</h1>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
+      <StudentProvider>
+        <MemoryRouter initialEntries={['/boom']}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="boom" element={<Boom />} />
+              <Route index element={<h1>Classes</h1>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </StudentProvider>,
     );
 
     expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong on this page.');

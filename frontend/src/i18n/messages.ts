@@ -12,6 +12,17 @@ export const messages = {
     myApplications: 'My Applications',
     createClass: 'Admin: Create Class',
   },
+  studentId: {
+    label: 'Birth Registration No.',
+    placeholder: '17-digit birth registration number',
+    helper: "Enter the student's birth registration number to apply or see applications.",
+    saved: '✓ Saved',
+    savedHint: 'Saved on this device. Applications are made for this number.',
+    change: 'Change',
+    digitsOnly: 'Use digits only (0–9 or ০–৯).',
+    wrongLength: (expected: number, entered: number) =>
+      `Must be exactly ${expected} digits (you entered ${entered}).`,
+  },
   pages: {
     classes: 'Classes',
     createClass: 'Create a class',
