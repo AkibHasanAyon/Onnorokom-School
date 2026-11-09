@@ -21,6 +21,40 @@ public static class ApiClientExtensions
         return client.SendAsync(request);
     }
 
+    /// <summary>POST /holds/{holdId}/confirm (header omitted when null).</summary>
+    public static Task<HttpResponseMessage> ConfirmAsync(this HttpClient client, object holdId, string? studentId) =>
+        client.SendAsync(WithStudent(new HttpRequestMessage(HttpMethod.Post, $"/holds/{holdId}/confirm"), studentId));
+
+    /// <summary>DELETE /holds/{holdId} (header omitted when null).</summary>
+    public static Task<HttpResponseMessage> CancelAsync(this HttpClient client, object holdId, string? studentId) =>
+        client.SendAsync(WithStudent(new HttpRequestMessage(HttpMethod.Delete, $"/holds/{holdId}"), studentId));
+
+    /// <summary>GET /me/holds (header omitted when null).</summary>
+    public static Task<HttpResponseMessage> MyHoldsAsync(this HttpClient client, string? studentId) =>
+        client.SendAsync(WithStudent(new HttpRequestMessage(HttpMethod.Get, "/me/holds"), studentId));
+
+    /// <summary>GET /holds/{holdId} and return the effective status string.</summary>
+    public static async Task<string> HoldStatusAsync(this HttpClient client, Guid holdId)
+    {
+        using var res = await client.GetAsync($"/holds/{holdId}");
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        return (await res.ReadJsonAsync()).GetProperty("status").GetString()!;
+    }
+
+    /// <summary>GET /classes/{classId} → (heldSeats, confirmedSeats, availableSeats).</summary>
+    public static async Task<(int held, int confirmed, int available)> SeatCountsAsync(this HttpClient client, Guid classId)
+    {
+        var json = await (await client.GetAsync($"/classes/{classId}")).ReadJsonAsync();
+        return (json.GetProperty("heldSeats").GetInt32(), json.GetProperty("confirmedSeats").GetInt32(),
+            json.GetProperty("availableSeats").GetInt32());
+    }
+
+    private static HttpRequestMessage WithStudent(HttpRequestMessage request, string? studentId)
+    {
+        if (studentId is not null) request.Headers.TryAddWithoutValidation("X-Student-Id", studentId);
+        return request;
+    }
+
     /// <summary>Applies and returns the new hold id; fails the test unless the API answers 201.</summary>
     public static async Task<Guid> CreateHoldIdAsync(this HttpClient client, Guid classId, string studentId)
     {

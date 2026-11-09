@@ -18,7 +18,10 @@ public static class Burst
         {
             await gate.Task;
             using var res = await send(i);
-            var json = await res.ReadJsonAsync();
+            var body = await res.Content.ReadAsStringAsync();
+            if (body.Length == 0) return new BurstResult(i, res.StatusCode, null, null); // e.g. 204 from cancel
+
+            var json = System.Text.Json.JsonDocument.Parse(body).RootElement;
             string? code = json.TryGetProperty("code", out var c) ? c.GetString() : null;
             Guid? holdId = json.TryGetProperty("holdId", out var h) ? Guid.Parse(h.GetString()!) : null;
             return new BurstResult(i, res.StatusCode, code, holdId);
