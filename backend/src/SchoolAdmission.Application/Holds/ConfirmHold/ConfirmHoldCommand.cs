@@ -8,7 +8,7 @@ using SchoolAdmission.Application.Common.Validation;
 namespace SchoolAdmission.Application.Holds.ConfirmHold;
 
 /// <summary>POST /holds/{holdId}/confirm — the (simulated) fee was paid.</summary>
-public sealed record ConfirmHoldCommand(string HoldId, string? StudentId) : ICommand<HoldConfirmedDto>;
+public sealed record ConfirmHoldCommand(string HoldId, string? StudentId) : ICommand<HoldConfirmedDto>, IStudentRequest;
 
 public sealed class ConfirmHoldCommandValidator : AbstractValidator<ConfirmHoldCommand>
 {

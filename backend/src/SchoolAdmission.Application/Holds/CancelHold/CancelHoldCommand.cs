@@ -8,7 +8,7 @@ using SchoolAdmission.Application.Common.Validation;
 namespace SchoolAdmission.Application.Holds.CancelHold;
 
 /// <summary>DELETE /holds/{holdId} — withdraw a HELD application; the seat returns immediately.</summary>
-public sealed record CancelHoldCommand(string HoldId, string? StudentId) : ICommand<Unit>;
+public sealed record CancelHoldCommand(string HoldId, string? StudentId) : ICommand<Unit>, IStudentRequest;
 
 public sealed class CancelHoldCommandValidator : AbstractValidator<CancelHoldCommand>
 {
