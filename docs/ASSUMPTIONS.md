@@ -42,13 +42,17 @@ Where the brief is silent, these are the choices made and why. (A copy of this f
 27. The admin "Create Class" screen is an unprotected page in the same app.
 28. Seat counts poll every 3 s, an open application every 5 s, and the countdown ticks locally every 250 ms, switching to EXPIRED the moment it reaches zero.
 29. **The application page decides "is this mine?" from My Applications**, because `GET /holds/{id}` has no owner field (and the contract can't change). If the saved number's list doesn't contain the hold, the page is read-only ("belongs to a different birth registration number"); with no number saved it asks for one. The server's 403 `HOLD_NOT_OWNED` stays the real check.
+30. **The number in the ID box is the identity.** A valid number is saved on this device (`localStorage`) and used at once; an empty or invalid box means "no student", so nothing is ever done for a number the parent can't see. Other open tabs follow a change.
 
 ## Bonus: why the seat limit holds with two backend processes
-All coordination happens inside PostgreSQL; the backend keeps no in-memory locks, caches or counters.
-- **Creating a hold** runs in a transaction that first locks the class row (`SELECT … FROM classes WHERE id = $1 FOR UPDATE`). Every applicant to that class — from any process, on any port — waits on that same row lock. Inside the lock we count `HELD (not expired) + CONFIRMED` and insert only if below `totalSeats`. The lock is released at commit, so the next applicant's count sees the new row.
-- Confirm, cancel and expiry never *increase* `held + confirmed`, so they don't need the class lock; they lock only the hold row (which also makes confirm idempotent under races).
-- A **partial unique index** on `(class_id, student_id) WHERE status IN ('HELD','CONFIRMED')` enforces rule 3 at the database level.
-- The expiry sweeper uses `FOR UPDATE SKIP LOCKED`, so several instances can sweep concurrently without blocking or deadlocking.
-- Startup migrations are serialized with a PostgreSQL advisory lock.
+All coordination happens inside PostgreSQL; a backend process keeps no locks, caches or counters in memory, so any number of them can share one database without sticky sessions.
+- **Creating a hold** runs in one READ COMMITTED transaction that first locks the class row (`SELECT … FROM classes WHERE id = $1 FOR UPDATE`). Every applicant to that class — from any process, on any port — waits on that same row lock. Inside the lock the backend counts `HELD (not expired) + CONFIRMED` and inserts only if that is below `totalSeats`. The lock is released at commit, so the next applicant's count already sees the new row. Different classes don't wait for each other.
+- **Confirm, cancel and expiry never increase** `held + confirmed`, so they don't need the class lock; they lock only the hold row, which also makes concurrent confirms count once.
+- A **partial unique index** on `(class_id, student_id) WHERE status IN ('HELD','CONFIRMED')` enforces "one active application per student per class" in the database itself.
+- The **expiry sweeper** in every instance uses `FOR UPDATE SKIP LOCKED`, so instances sweep side by side without blocking or deadlocking. Seat counts never depend on it (item 12).
+- **Start-up migrations** are serialized with a PostgreSQL advisory lock, so two instances can start at the same moment on an empty database.
+- **Assumption:** the instances' clocks agree (same host, or NTP-synced servers). "Now" comes from each backend's clock; a clock that runs *ahead* would treat a hold as expired early and could give its seat away. In Docker on one host they share the host clock.
 
-Demonstrated by `docker-compose.multi.yml` (second backend on :8081), `scripts/concurrency-smoke.sh`, and the `TwoInstances_ShareDatabase_NeverOversell` integration test.
+Demonstrated by:
+- `docker-compose.multi.yml` (a second backend on :8081) with `scripts/concurrency-smoke.sh`: 300 simultaneous applications for 20 seats, alternating between the two ports → exactly 20 × 201, 280 × 409, no 5xx.
+- The `TwoInstanceTests` integration tests (two independent hosts, each with its own connection pool, on one database), including `TwoInstances_ShareDatabase_NeverOversell`: 200 applications for 30 seats → exactly 30 holds. With the row lock removed, the same test gets 41 holds for 30 seats, so it really detects overselling.
