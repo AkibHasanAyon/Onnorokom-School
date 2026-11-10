@@ -314,3 +314,112 @@ td.num {
 .muted {
   color: var(--muted);
 }
+
+button.danger {
+  border-color: var(--danger);
+  background: var(--danger);
+  color: var(--primary-fg);
+}
+
+/* ---- Status badge (the word is always shown; colour is extra) ---- */
+.badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.badge-held {
+  color: var(--held);
+  background: var(--held-bg);
+}
+
+.badge-confirmed {
+  color: var(--confirmed);
+  background: var(--confirmed-bg);
+}
+
+.badge-expired,
+.badge-cancelled {
+  color: var(--inactive);
+  background: var(--inactive-bg);
+}
+
+/* ---- Application page ---- */
+.hold-facts {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.hold-facts > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+
+.hold-facts dt {
+  min-width: 6rem;
+  font-weight: 600;
+}
+
+.hold-facts dd {
+  margin: 0;
+}
+
+.countdown {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.countdown-urgent {
+  color: var(--danger);
+}
+
+/* ---- Confirmation dialog ---- */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(0 0 0 / 0.45);
+  z-index: 10;
+}
+
+.dialog {
+  width: min(100%, 26rem);
+  padding: 20px;
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+.dialog h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+}
+
+/* ---- Connection banner + stale data ---- */
+.connection-banner {
+  border-bottom: 1px solid var(--held);
+  background: var(--held-bg);
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.connection-banner .container {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.stale-note {
+  color: var(--held);
+  font-weight: 600;
+}

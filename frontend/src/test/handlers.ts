@@ -8,6 +8,7 @@ export const defaultHandlers = [
   http.get('*/health', () => HttpResponse.json({ status: 'ok', serverTime: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z') })),
   http.get('*/classes', () => HttpResponse.json([])),
   http.get('*/me/holds', () => HttpResponse.json([])),
+  http.get('*/holds/:holdId', () => problem(404, 'HOLD_NOT_FOUND')),
 ];
 
 /** Problem+json error body like the backend sends (API.md §3). */

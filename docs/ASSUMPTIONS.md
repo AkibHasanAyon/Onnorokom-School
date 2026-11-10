@@ -41,6 +41,7 @@ Where the brief is silent, these are the choices made and why. (A copy of this f
 26. UI text is English (all strings centralized for easy translation); Bengali digits are accepted in the ID box.
 27. The admin "Create Class" screen is an unprotected page in the same app.
 28. Seat counts poll every 3 s, an open application every 5 s, and the countdown ticks locally every 250 ms, switching to EXPIRED the moment it reaches zero.
+29. **The application page decides "is this mine?" from My Applications**, because `GET /holds/{id}` has no owner field (and the contract can't change). If the saved number's list doesn't contain the hold, the page is read-only ("belongs to a different birth registration number"); with no number saved it asks for one. The server's 403 `HOLD_NOT_OWNED` stays the real check.
 
 ## Bonus: why the seat limit holds with two backend processes
 All coordination happens inside PostgreSQL; the backend keeps no in-memory locks, caches or counters.

@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
 import { messages } from '../i18n/messages';
 import { StudentIdBar } from '../student/StudentIdBar';
+import { ConnectionBanner } from './ConnectionBanner';
 import { ErrorBoundary } from './ErrorBoundary';
 
 /** Header (title, student ID bar, navigation) + the current page. */
@@ -33,6 +34,7 @@ export function Layout() {
           </nav>
         </div>
       </header>
+      <ConnectionBanner />
       <main className="container">
         {/* Keyed by path: a crash on one page doesn't stick after navigating elsewhere. */}
         <ErrorBoundary key={pathname}>
