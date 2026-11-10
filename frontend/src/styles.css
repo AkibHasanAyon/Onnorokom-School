@@ -405,3 +405,21 @@ button.danger {
   margin-top: 0;
   font-size: 1.2rem;
 }
+
+/* ---- Connection banner + stale data ---- */
+.connection-banner {
+  border-bottom: 1px solid var(--held);
+  background: var(--held-bg);
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.connection-banner .container {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.stale-note {
+  color: var(--held);
+  font-weight: 600;
+}

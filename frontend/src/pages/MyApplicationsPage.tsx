@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { serverNow } from '../api/serverClock';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { FreshnessNote } from '../components/FreshnessNote';
 import { StatusBadge } from '../components/StatusBadge';
 import { formatCountdown, secondsLeft } from '../holds/countdown';
 import { orderApplications } from '../holds/order';
@@ -31,7 +32,9 @@ export function MyApplicationsPage() {
   return (
     <>
       <h1>{t.titleFor(studentId)}</h1>
-      <p className="muted">{t.autoRefresh}</p>
+      <p className="muted">
+        {t.autoRefresh} <FreshnessNote updatedAt={myHolds.dataUpdatedAt} stale={myHolds.isError} />
+      </p>
 
       {myHolds.isPending ? (
         <p role="status">{t.loading}</p>

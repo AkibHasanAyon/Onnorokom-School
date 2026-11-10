@@ -5,6 +5,7 @@ import { serverNow } from '../api/serverClock';
 import type { HoldDetails, HoldStatus } from '../api/types';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { FreshnessNote } from '../components/FreshnessNote';
 import { StatusBadge } from '../components/StatusBadge';
 import { effectiveStatus, formatClockTime, formatCountdown, secondsLeft } from '../holds/countdown';
 import { queryKeys, useCancelHold, useConfirmHold, useHold, useMyHolds } from '../hooks/queries';
@@ -53,16 +54,27 @@ export function ApplicationPage() {
     );
   }
 
-  return <HoldView hold={hold.data} access={access} studentId={studentId} />;
+  return (
+    <HoldView
+      hold={hold.data}
+      access={access}
+      studentId={studentId}
+      updatedAt={hold.dataUpdatedAt}
+      stale={hold.isError}
+    />
+  );
 }
 
 interface HoldViewProps {
   hold: HoldDetails;
   access: Access;
   studentId: string | null;
+  /** When the hold was last fetched, and whether the latest refresh failed (stale-data note). */
+  updatedAt: number;
+  stale: boolean;
 }
 
-function HoldView({ hold, access, studentId }: HoldViewProps) {
+function HoldView({ hold, access, studentId, updatedAt, stale }: HoldViewProps) {
   const queryClient = useQueryClient();
   const confirm = useConfirmHold(hold.holdId, studentId);
   const cancel = useCancelHold(hold.holdId, studentId);
@@ -89,6 +101,11 @@ function HoldView({ hold, access, studentId }: HoldViewProps) {
   return (
     <>
       <h1>{hold.className ? t.titleFor(hold.className) : messages.pages.application}</h1>
+      {(stale || status === 'HELD') && (
+        <p className="muted">
+          <FreshnessNote updatedAt={updatedAt} stale={stale} />
+        </p>
+      )}
 
       <dl className="hold-facts">
         <div>

@@ -4,6 +4,7 @@ import { ApiError } from '../api/client';
 import { serverNow } from '../api/serverClock';
 import type { ClassSummary, MyHold } from '../api/types';
 import { ErrorAlert } from '../components/ErrorAlert';
+import { FreshnessNote } from '../components/FreshnessNote';
 import { useClasses, useCreateHold, useMyHolds } from '../hooks/queries';
 import { useNow } from '../hooks/useNow';
 import { messages } from '../i18n/messages';
@@ -30,7 +31,7 @@ export function ClassListPage() {
   const myHolds = useMyHolds(studentId);
   const apply = useCreateHold(studentId);
   const navigate = useNavigate();
-  const now = useNow(1_000);
+  useNow(1_000); // re-check which holds are still active as time passes
   const hintId = useId();
 
   const mine = holdsByClass(studentId ? myHolds.data : undefined, serverNow());
@@ -46,7 +47,7 @@ export function ClassListPage() {
       <h1>{messages.pages.classes}</h1>
       <p className="muted">
         {t.autoRefresh}{' '}
-        {classes.dataUpdatedAt > 0 && <span>{updatedLabel(now - classes.dataUpdatedAt)}</span>}
+        <FreshnessNote updatedAt={classes.dataUpdatedAt} stale={classes.isError} />
       </p>
       {!studentId && (
         <p id={hintId} className="notice">
@@ -142,11 +143,6 @@ function ApplyCell({ cls, hold, hasStudent, busy, applyingThis, hintId, onApply 
       {applyingThis ? t.applying : t.apply}
     </button>
   );
-}
-
-function updatedLabel(ageMs: number): string {
-  const seconds = Math.max(0, Math.floor(ageMs / 1000));
-  return seconds < 2 ? t.updatedJustNow : t.updatedAgo(seconds);
 }
 
 /** "Open it" / "View" for the 409s that point at an existing application. */

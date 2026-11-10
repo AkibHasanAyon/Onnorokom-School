@@ -37,8 +37,6 @@ export const messages = {
     empty: 'No classes yet. An admin can create one from',
     emptyLink: 'Admin: Create Class',
     columns: { name: 'Class', total: 'Total', held: 'Held', confirmed: 'Confirmed', available: 'Available', action: 'Action' },
-    updatedJustNow: 'Updated just now',
-    updatedAgo: (seconds: number) => `Updated ${seconds} s ago`,
     autoRefresh: 'Seat numbers refresh automatically every 3 seconds.',
     needStudentId: 'Enter a birth registration number at the top of the page to apply.',
     apply: 'Apply',
@@ -95,6 +93,17 @@ export const messages = {
     needStudentId: 'Enter the birth registration number this application was made for at the top of the page to pay or cancel.',
     backToClasses: 'Back to classes',
     myApplications: 'My applications',
+  },
+  connection: {
+    unreachable: "Can't reach the server.",
+    serverTrouble: 'The server is having trouble right now.',
+    showingDataFrom: (seconds: number) => `Showing data from ${seconds} s ago.`,
+    retrying: 'Retrying…',
+  },
+  freshness: {
+    justNow: 'Updated just now',
+    ago: (seconds: number) => `Updated ${seconds} s ago`,
+    stale: (seconds: number) => `⚠ Couldn't refresh — showing data from ${seconds} s ago, it may be out of date.`,
   },
   myApplications: {
     titleFor: (studentId: string) => `My applications (${studentId})`,

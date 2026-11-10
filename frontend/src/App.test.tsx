@@ -71,16 +71,18 @@ describe('ErrorBoundary', () => {
 
   it('replaces a crashed page with a friendly message instead of a blank screen', async () => {
     render(
-      <StudentProvider>
-        <MemoryRouter initialEntries={['/boom']}>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="boom" element={<Boom />} />
-              <Route index element={<h1>Classes</h1>} />
-            </Route>
-          </Routes>
-        </MemoryRouter>
-      </StudentProvider>,
+      <QueryClientProvider client={createQueryClient()}>
+        <StudentProvider>
+          <MemoryRouter initialEntries={['/boom']}>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="boom" element={<Boom />} />
+                <Route index element={<h1>Classes</h1>} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </StudentProvider>
+      </QueryClientProvider>,
     );
 
     expect(screen.getByRole('alert')).toHaveTextContent('Something went wrong on this page.');
