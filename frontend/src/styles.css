@@ -53,6 +53,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
+  overflow-wrap: break-word; /* long unbroken text (a 17-digit number, a class name without spaces) wraps instead of widening the page */
 }
 
 a {
@@ -198,6 +199,7 @@ button:disabled {
 
 /* ---- Tables ---- */
 .table-scroll {
+  position: relative; /* containing block for visually-hidden headings, so they scroll with the table, not the page */
   overflow-x: auto; /* the page stays 360 px wide; only the table scrolls */
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -237,6 +239,9 @@ td.num {
   width: 1px;
   height: 1px;
   overflow: hidden;
+  margin: -1px;
+  padding: 0;
+  border: 0;
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
