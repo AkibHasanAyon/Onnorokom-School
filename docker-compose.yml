@@ -54,5 +54,12 @@ services:
       db:
         condition: service_healthy
 
+  # Typecheck + Vitest (jsdom, MSW): no database or backend needed.
+  frontend-tests:
+    profiles: ["test"]
+    build:
+      context: ./frontend
+      target: test
+
 volumes:
   pgdata:
