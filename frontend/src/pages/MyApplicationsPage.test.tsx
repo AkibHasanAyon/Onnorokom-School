@@ -1,45 +1,27 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { HoldStatus, MyHold } from '../api/types';
+import { givenMyHoldsByStudent as givenHolds } from '../test/api';
+import { aMyHold, inSeconds, OTHER_STUDENT as OTHER, STUDENT } from '../test/fixtures';
 import { problem } from '../test/handlers';
 import { renderApp } from '../test/render';
 import { server } from '../test/server';
 
-const STUDENT = '20152691234567890';
-const OTHER = '20152691234500000';
-
-const inSeconds = (s: number) => new Date(Date.now() + s * 1000).toISOString();
-
 function mine(holdId: string, className: string, status: HoldStatus, expiresIn = 462, createdAgo = 60): MyHold {
-  return { holdId, classId: `c-${holdId}`, className, status, expiresAt: inSeconds(expiresIn), createdAt: inSeconds(-createdAgo) };
+  return aMyHold({ holdId, classId: `c-${holdId}`, className, status, expiresAt: inSeconds(expiresIn), createdAt: inSeconds(-createdAgo) });
 }
 
 const held = mine('h1', 'Class 6 - Morning Shift', 'HELD', 462, 30);
 const confirmed = mine('h2', 'Class 7 - Morning Shift', 'CONFIRMED', -100, 10);
 const expired = mine('h3', 'Class 5 - Day Shift', 'EXPIRED', -600, 900);
 
-/** Answers GET /me/holds per X-Student-Id and records the ids asked for. */
-function givenHolds(byStudent: Record<string, MyHold[]>) {
-  const asked: (string | null)[] = [];
-  server.use(
-    http.get('*/me/holds', ({ request }) => {
-      const id = request.headers.get('X-Student-Id');
-      asked.push(id);
-      return HttpResponse.json(byStudent[id ?? ''] ?? []);
-    }),
-  );
-  return asked;
-}
-
 const bodyRows = () => within(screen.getByRole('table')).getAllByRole('row').slice(1);
 const cellsOf = (row: HTMLElement) => [
   within(row).getByRole('rowheader').textContent,
   ...within(row).getAllByRole('cell').slice(0, 2).map((c) => c.textContent),
 ];
-
-afterEach(() => vi.useRealTimers());
 
 describe('MyApplicationsPage', () => {
   it('lists every application for the saved number: active first, then newest (R11)', async () => {
