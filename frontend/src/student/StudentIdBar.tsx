@@ -21,6 +21,14 @@ export function StudentIdBar() {
   const error = text.trim() === '' || valid ? null : validationMessage(normalized);
   const saved = valid && studentId === normalized;
 
+  // The identity changed somewhere else (another tab): show it, so the box always matches who we act for.
+  // Changes made in this box already match; adjusting state during render avoids a flash of the old value.
+  const [seenStudentId, setSeenStudentId] = useState(studentId);
+  if (studentId !== seenStudentId) {
+    setSeenStudentId(studentId);
+    if (studentId !== (valid ? normalized : null)) setText(studentId ?? '');
+  }
+
   function onChange(value: string) {
     setText(value);
     const next = normalizeStudentId(value);
