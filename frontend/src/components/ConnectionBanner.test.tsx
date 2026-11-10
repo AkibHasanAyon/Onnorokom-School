@@ -1,26 +1,21 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api/client';
-import type { ClassSummary } from '../api/types';
 import { connectionProblemKind } from '../hooks/useConnectionProblem';
+import { givenClasses } from '../test/api';
+import { morningShift as morning, STUDENT } from '../test/fixtures';
 import { problem } from '../test/handlers';
 import { renderApp } from '../test/render';
 import { server } from '../test/server';
 
-const morning: ClassSummary = {
-  id: 'c-morning', name: 'Class 6 - Morning Shift', totalSeats: 120, heldSeats: 15, confirmedSeats: 80, availableSeats: 25,
-};
-
 const banner = () => screen.queryByText(/Retrying…/);
-
-afterEach(() => vi.useRealTimers());
 
 describe('connection banner and stale data (R12)', () => {
   it("says it can't reach the server while refreshes fail, keeps the last data, and clears itself", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    server.use(http.get('*/classes', () => HttpResponse.json([morning])));
+    givenClasses(morning);
     renderApp('/');
     await screen.findByRole('cell', { name: '25' });
     expect(banner()).not.toBeInTheDocument();
@@ -86,7 +81,7 @@ describe('connection banner and stale data (R12)', () => {
         ]),
       ),
     );
-    renderApp('/my-applications', { studentId: '20152691234567890' });
+    renderApp('/my-applications', { studentId: STUDENT });
     await screen.findByText('Class 6 - Morning Shift');
 
     server.use(http.get('*/me/holds', () => HttpResponse.error()));

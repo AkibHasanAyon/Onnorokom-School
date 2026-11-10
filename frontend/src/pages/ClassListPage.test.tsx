@@ -1,34 +1,15 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ClassSummary, HoldCreated, HoldDetails, MyHold } from '../api/types';
+import { describe, expect, it, vi } from 'vitest';
+import type { HoldCreated, HoldDetails } from '../api/types';
+import { givenClasses, givenMyHolds } from '../test/api';
+import { dayShift as day, inMinutes, morningShift as morning, STUDENT } from '../test/fixtures';
 import { problem } from '../test/handlers';
 import { renderApp } from '../test/render';
 import { server } from '../test/server';
 
-const STUDENT = '20152691234567890';
-
-const morning: ClassSummary = {
-  id: 'c-morning', name: 'Class 6 - Morning Shift', totalSeats: 120, heldSeats: 15, confirmedSeats: 80, availableSeats: 25,
-};
-const day: ClassSummary = {
-  id: 'c-day', name: 'Class 6 - Day Shift', totalSeats: 120, heldSeats: 2, confirmedSeats: 118, availableSeats: 0,
-};
-
-const inMinutes = (m: number) => new Date(Date.now() + m * 60_000).toISOString();
-
-function givenClasses(...classes: ClassSummary[]) {
-  server.use(http.get('*/classes', () => HttpResponse.json(classes)));
-}
-
-function givenMyHolds(...holds: MyHold[]) {
-  server.use(http.get('*/me/holds', () => HttpResponse.json(holds)));
-}
-
 const row = (name: string) => screen.getByRole('row', { name: new RegExp(name) });
-
-afterEach(() => vi.useRealTimers());
 
 describe('ClassListPage', () => {
   it('shows every class with total, held, confirmed and available seats', async () => {

@@ -1,49 +1,22 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { reportServerTime, resetServerOffset } from '../api/serverClock';
-import type { HoldDetails, HoldStatus, MyHold } from '../api/types';
+import { describe, expect, it, vi } from 'vitest';
+import { reportServerTime } from '../api/serverClock';
+import type { HoldDetails, HoldStatus } from '../api/types';
+import { givenHold } from '../test/api';
+import { aHold, asMyHold, HOLD_ID, OTHER_STUDENT, STUDENT } from '../test/fixtures';
 import { problem } from '../test/handlers';
 import { renderApp } from '../test/render';
 import { server } from '../test/server';
 
-const STUDENT = '20152691234567890';
-const OTHER_STUDENT = '20152691234500000';
-const HOLD_ID = '0193a6f3-0a11-7c22-8e33-445566778899';
 const PATH = `/applications/${HOLD_ID}`;
 
-const inSeconds = (s: number) => new Date(Date.now() + s * 1000).toISOString();
-
-function hold(status: HoldStatus, expiresInSeconds = 600): HoldDetails {
-  return {
-    holdId: HOLD_ID,
-    classId: 'c-morning',
-    className: 'Class 6 - Morning Shift',
-    status,
-    expiresAt: inSeconds(expiresInSeconds),
-  };
-}
-
-const asMine = (h: HoldDetails): MyHold => ({
-  holdId: h.holdId, classId: h.classId, className: h.className ?? '', status: h.status, expiresAt: h.expiresAt,
-});
-
-/** GET /holds/{id} answers with `current()`; GET /me/holds lists it as the saved student's. */
-function givenHold(current: () => HoldDetails) {
-  server.use(
-    http.get(`*/holds/${HOLD_ID}`, () => HttpResponse.json(current())),
-    http.get('*/me/holds', () => HttpResponse.json([asMine(current())])),
-  );
-}
+const hold = (status: HoldStatus, expiresInSeconds = 600): HoldDetails =>
+  aHold({ status, expiresAt: new Date(Date.now() + expiresInSeconds * 1000).toISOString() });
 
 const main = () => within(screen.getByRole('main'));
 const badge = () => main().getByText(/^(HELD|CONFIRMED|EXPIRED|CANCELLED)$/);
-
-afterEach(() => {
-  vi.useRealTimers();
-  resetServerOffset();
-});
 
 describe('ApplicationPage', () => {
   it('shows the class, the HELD badge, a live countdown and both actions', async () => {
@@ -71,7 +44,7 @@ describe('ApplicationPage', () => {
         holdFetches += 1;
         return HttpResponse.json(h);
       }),
-      http.get('*/me/holds', () => HttpResponse.json([asMine(h)])),
+      http.get('*/me/holds', () => HttpResponse.json([asMyHold(h)])),
     );
     renderApp(PATH, { studentId: STUDENT });
     expect(await screen.findByRole('button', { name: 'Pay Admission Fee' })).toBeEnabled();

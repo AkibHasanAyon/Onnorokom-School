@@ -193,7 +193,7 @@ function HoldView({ hold, access, studentId, updatedAt, stale }: HoldViewProps) 
         </p>
       )}
 
-      {askCancel && (
+      {askCancel && status === 'HELD' && (
         <ConfirmDialog
           title={t.confirmTitle}
           body={t.confirmBody}
