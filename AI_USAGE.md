@@ -11,7 +11,7 @@
 - **Human control.** The AI stopped after every phase with a report (commits, test results, push status) and continued only after I said so. I reviewed the reports and repository, and made the decisions the AI couldn't, such as GitHub settings.
 
 ## Where the AI was wrong and how it was caught
-The full list (23 entries) is in `todo.md` → "AI Mistakes & Fixes". The most important ones:
+The full list (24 entries) is in `todo.md` → "AI Mistakes & Fixes". The most important ones:
 
 - **[API JSON]** It assumed ASP.NET Core rejects `"totalSeats":"120"` (a number in a string). The web defaults accept it, which breaks the contract. **Caught by:** a malformed-JSON test that got 200. **Fix:** strict number handling.
 - **[Robustness]** The class-name validator let a NUL character through; PostgreSQL rejected it → **500**, a forbidden result. **Caught by:** the hostile-input robustness matrix. **Fix:** control characters are rejected with a 400.
@@ -23,5 +23,6 @@ The full list (23 entries) is in `todo.md` → "AI Mistakes & Fixes". The most i
 - **[Tests]** Several tests were wrong in ways that made them pass or fail for the wrong reason: a fake clock set in the past, a `fetch` stub that answered every URL with the health response, a test that changed fake data after the refresh it meant to observe, a fake hold whose deadline moved on every poll. **Caught by:** failing runs and reading the tests back. **Fix:** each test rewritten; key tests mutation-checked.
 - **[Build]** An EF Core version conflict warning (MSB3277) existed for a whole phase, hidden by incremental builds. **Caught by:** a full `--no-incremental` rebuild. **Fix:** pinned versions.
 - **[Docker]** Every backend container printed `Error: libgssapi_krb5.so.2 …` at start-up from Phase 01 on; the AI's log checks only looked for `fail:`. **Caught by:** reading both instances' logs during the multi-instance work. **Fix:** disabled the unused GSS-encryption probe in the connection strings.
+- **[Frontend layout]** At phone width (360 px) the class list was 395 px wide and scrolled sideways: the visually hidden column headings are absolutely positioned and escaped the table's scroll box. A 17-digit number in a heading also stuck out. jsdom can't measure layout, so no unit test could see it. **Caught by:** the clean-clone QA run in a real headless Chromium (Playwright), which measured every screen at 360 px. **Fix:** the scroll box became the headings' containing block, and long unbroken text now wraps.
 - **[Git]** It pushed a phase branch before `main`, so GitHub made that branch the default. **Caught by:** checking the remote's HEAD. **Fix:** I switched the default branch to `main`.
 - **[Project log]** It first wrote estimated times into the log instead of the real commit times. **Caught by:** comparing with `git log`. **Fix:** all times now come from git.
