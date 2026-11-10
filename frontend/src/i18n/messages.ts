@@ -96,6 +96,20 @@ export const messages = {
     backToClasses: 'Back to classes',
     myApplications: 'My applications',
   },
+  myApplications: {
+    titleFor: (studentId: string) => `My applications (${studentId})`,
+    caption: 'Applications for this birth registration number',
+    needStudentId: "Enter the student's birth registration number at the top of the page to see applications.",
+    loading: 'Loading applications…',
+    empty: 'No applications yet. Go to',
+    emptyLink: 'Classes',
+    emptyAfter: 'to apply.',
+    columns: { name: 'Class', status: 'Status', timeLeft: 'Time left', action: 'Action' },
+    none: '—',
+    open: 'Open',
+    openFor: (className: string) => `Open application for ${className}`,
+    autoRefresh: 'This list refreshes automatically every 5 seconds.',
+  },
   errors: {
     NO_SEATS_AVAILABLE:
       "Sorry, all seats in this class are taken right now. Seats may open up if other applicants don't pay in time.",
