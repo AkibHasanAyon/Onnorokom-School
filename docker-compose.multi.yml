@@ -1,0 +1,21 @@
+# Bonus B1: a second backend process on :8081 sharing the same PostgreSQL database.
+#   docker compose -f docker-compose.yml -f docker-compose.multi.yml up -d --build
+#   ./scripts/concurrency-smoke.sh
+# Both instances apply migrations at start-up (serialized by a PostgreSQL advisory lock) and both run the
+# expiry sweeper (FOR UPDATE SKIP LOCKED). The seat limit holds because every hold is created under the
+# class row lock in the database, never in process memory.
+services:
+  backend-2:
+    build: ./backend
+    environment:
+      ASPNETCORE_HTTP_PORTS: "8080"
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=admission;Username=admission;Password=admission;Maximum Pool Size=100;Timeout=15;Command Timeout=30;GSS Encryption Mode=Disable"
+      HOLD_DURATION_SECONDS: ${HOLD_DURATION_SECONDS:-600}
+      HOLD_SWEEP_INTERVAL_SECONDS: ${HOLD_SWEEP_INTERVAL_SECONDS:-5}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    ports:
+      - "8081:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
