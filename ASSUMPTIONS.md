@@ -1,6 +1,6 @@
 # ASSUMPTIONS.md
 
-Where the brief is silent, these are the choices made and why. (The same list is kept in `docs/ASSUMPTIONS.md` with the specification.)
+Where the brief is silent, these are the choices made and why. 
 
 ## Identity & access
 1. **No authentication anywhere, including admin endpoints.** The brief says "no login" and the API is tested directly; `X-Student-Id` is trusted after format checks.

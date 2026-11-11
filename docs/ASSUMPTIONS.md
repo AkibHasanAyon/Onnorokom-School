@@ -1,7 +1,6 @@
 # ASSUMPTIONS.md
 
-Where the brief is silent, these are the choices made and why. (A copy of this file lives at the repository root, where reviewers expect it.)
-
+Where the brief is silent, these are the choices made and why. 
 ## Identity & access
 1. **No authentication anywhere, including admin endpoints.** The brief says "no login" and the API is tested directly; `X-Student-Id` is trusted after format checks.
 2. **A valid student ID is exactly 17 ASCII digits** (surrounding whitespace trimmed). No checksum or birth-year check — the format rules weren't given and over-validation could reject real numbers. The UI also accepts Bengali digits (০–৯) and converts them.
